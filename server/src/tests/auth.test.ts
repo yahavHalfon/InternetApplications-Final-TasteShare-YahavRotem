@@ -247,14 +247,14 @@ describe("Auth Routes Tests", () => {
     });
 
     test("Auth Middleware - Fail (No Authorization Header)", async () => {
-        const response = await request(app).post("/post").send({ title: "t", content: "c" });
+        const response = await request(app).post("/recipes").send({ title: "t", description: "d" });
         expect(response.statusCode).toBe(401);
     });
 
     test("Auth Middleware - Fail (Invalid Header Format)", async () => {
-        const response = await request(app).post("/post")
+        const response = await request(app).post("/recipes")
             .set("Authorization", "Basic invalid")
-            .send({ title: "t", content: "c" });
+            .send({ title: "t", description: "d" });
         expect(response.statusCode).toBe(401);
     });
 
@@ -267,17 +267,17 @@ describe("Auth Routes Tests", () => {
         const user = await userModel.findOne({ email: tempUser.email });
         if (user) await userModel.findByIdAndDelete(user._id);
 
-        const response = await request(app).post("/post")
+        const response = await request(app).post("/recipes")
             .set("Authorization", "Bearer " + accessToken)
-            .send({ title: "t", content: "c" });
+            .send({ title: "t", description: "d" });
 
         expect(response.statusCode).toBe(401);
     });
 
     test("Auth Middleware - Fail (Invalid Token Signature)", async () => {
-        const response = await request(app).post("/post")
+        const response = await request(app).post("/recipes")
             .set("Authorization", "Bearer invalidtoken123")
-            .send({ title: "t", content: "c" });
+            .send({ title: "t", description: "d" });
         expect(response.statusCode).toBe(401);
     });
 
@@ -286,9 +286,9 @@ describe("Auth Routes Tests", () => {
         delete process.env.JWT_SECRET;
 
         try {
-            const response = await request(app).post("/post")
+            const response = await request(app).post("/recipes")
                 .set("Authorization", "Bearer some.valid.token")
-                .send({ title: "t", content: "c" });
+                .send({ title: "t", description: "d" });
             expect(response.statusCode).toBe(500);
         } finally {
             process.env.JWT_SECRET = originalSecret;

@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.dev" });
 import authRoute from "./routes/authRoutes";
 import { swaggerUi, swaggerSpec } from "./swagger";
-import postRoutes from "./routes/postRoutes";
+import recipeRoutes from "./routes/recipeRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import userRoutes from "./routes/userRoutes";
 
@@ -16,7 +16,7 @@ app.use(morgan("common"));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Posts & Comments API Documentation'
+  customSiteTitle: 'Recipes & Comments API Documentation'
 }));
 
 app.use((req, res, next) => {
@@ -27,7 +27,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/auth", authRoute);
-app.use("/post", postRoutes);
+app.use("/recipes", recipeRoutes);
 app.use("/comments", commentRoutes);
 app.use("/users", userRoutes);
 

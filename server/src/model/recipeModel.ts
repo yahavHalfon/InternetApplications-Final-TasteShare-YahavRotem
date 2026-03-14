@@ -2,30 +2,27 @@ import { Schema, model, Types } from "mongoose";
 
 export type RecipeDifficulty = "Easy" | "Medium" | "Advanced";
 
-export interface IPost {
+export interface IRecipe {
     userId: Types.ObjectId;
-    sender?: Types.ObjectId;
     image: string;
     title: string;
     description: string;
     ingredients: string[];
     instructions: string[];
+    likedBy: Types.ObjectId[];
     cookTime: string;
     servings: number;
     difficulty: RecipeDifficulty;
-    likes: Types.ObjectId[];
-    comments: Types.ObjectId[];
     createdAt: Date;
     updatedAt: Date;
 }
 
-const postSchema = new Schema<IPost>(
+const recipeSchema = new Schema<IRecipe>(
     {
         userId: {
             type: Schema.Types.ObjectId,
             ref: "User",
             required: true,
-            alias: "sender",
         },
         image: {
             type: String,
@@ -56,6 +53,12 @@ const postSchema = new Schema<IPost>(
                 trim: true,
             },
         ],
+        likedBy: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "User",
+            },
+        ],
         cookTime: {
             type: String,
             required: true,
@@ -71,25 +74,12 @@ const postSchema = new Schema<IPost>(
             enum: ["Easy", "Medium", "Advanced"],
             required: true,
         },
-        likes: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        ],
-        comments: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "Comment",
-            },
-        ],
     },
     {
         timestamps: true,
     }
 );
 
-postSchema.path("likes").default(() => []);
-postSchema.path("comments").default(() => []);
+recipeSchema.path("likedBy").default(() => []);
 
-export default model<IPost>("Post", postSchema);
+export default model<IRecipe>("Recipe", recipeSchema);

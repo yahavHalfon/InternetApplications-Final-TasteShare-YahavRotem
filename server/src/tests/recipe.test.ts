@@ -3,7 +3,7 @@ import initApp from "../index";
 import mongoose from "mongoose";
 import { Express } from "express";
 import userModel from "../model/userModel";
-import postModel from "../model/postModel";
+import recipeModel from "../model/recipeModel";
 
 let app: Express;
 const testUser = {
@@ -22,7 +22,7 @@ let userId: string;
 beforeAll(async () => {
     app = await initApp();
     await userModel.deleteMany();
-    await postModel.deleteMany();
+    await recipeModel.deleteMany();
 });
 
 afterAll(async () => {
@@ -30,7 +30,7 @@ afterAll(async () => {
     await mongoose.connection.close();
 });
 
-describe("Post Tests", () => {
+describe("Recipe Tests", () => {
 
     test("Auth Setup: Register User 1", async () => {
         const response = await request(app).post("/auth/register").send(testUser);
@@ -47,91 +47,93 @@ describe("Post Tests", () => {
     });
 
 
-    let postId: string;
+    let recipeId: string;
 
-    test("Create Post - Success", async () => {
+    const recipePayload = {
+        image: "https://example.com/recipe.jpg",
+        title: "Test Recipe",
+        description: "Test recipe description",
+        ingredients: ["1 cup flour"],
+        instructions: ["Mix ingredients"],
+        cookTime: "25 min",
+        servings: 2,
+        difficulty: "Easy",
+    };
+
+    test("Create Recipe - Success", async () => {
         const response = await request(app)
-            .post("/post")
+            .post("/recipes")
             .set("Authorization", "Bearer " + accessToken)
-            .send({
-                title: "Test Post",
-                content: "Test Content",
-                sender: "Test Sender",
-            });
+            .send(recipePayload);
         expect(response.statusCode).toBe(201);
-        expect(response.body.sender).toBe(userId);
-        postId = response.body._id;
+        expect(response.body.userId).toBe(userId);
+        recipeId = response.body._id;
     });
 
-    test("Create Post - Fail (No Auth)", async () => {
-        const response = await request(app).post("/post").send({
-            title: "Test Post",
-            content: "Test Content",
-        });
+    test("Create Recipe - Fail (No Auth)", async () => {
+        const response = await request(app).post("/recipes").send(recipePayload);
         expect(response.statusCode).toBe(401);
     });
 
-    test("Create Post - Fail (Validation Error)", async () => {
+    test("Create Recipe - Fail (Validation Error)", async () => {
         const response = await request(app)
-            .post("/post")
+            .post("/recipes")
             .set("Authorization", "Bearer " + accessToken)
             .send({
-                // Missing title and content
+                // Missing required recipe fields
             });
         expect(response.statusCode).toBe(400);
     });
 
 
-    test("Get All Posts", async () => {
-        const response = await request(app).get("/post");
+    test("Get All Recipes", async () => {
+        const response = await request(app).get("/recipes");
         expect(response.statusCode).toBe(200);
         expect(response.body.length).toBeGreaterThan(0);
     });
 
-    test("Get Post By ID - Success", async () => {
-        const response = await request(app).get("/post/" + postId);
+    test("Get Recipe By ID - Success", async () => {
+        const response = await request(app).get("/recipes/" + recipeId);
         expect(response.statusCode).toBe(200);
     });
 
-    test("Get Post By ID - Fail (Not Found)", async () => {
+    test("Get Recipe By ID - Fail (Not Found)", async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
-        const response = await request(app).get("/post/" + nonExistentId);
+        const response = await request(app).get("/recipes/" + nonExistentId);
         expect(response.statusCode).toBe(404);
     });
 
-    test("Get Post By ID - Fail (Invalid ID Format)", async () => {
-        const response = await request(app).get("/post/invalid-id-123");
+    test("Get Recipe By ID - Fail (Invalid ID Format)", async () => {
+        const response = await request(app).get("/recipes/invalid-id-123");
         expect(response.statusCode).toBe(400); // BaseController handles CastError
     });
 
 
-    test("Update Post - Success", async () => {
+    test("Update Recipe - Success", async () => {
         const response = await request(app)
-            .put("/post/" + postId)
+            .put("/recipes/" + recipeId)
             .set("Authorization", "Bearer " + accessToken)
             .send({
                 title: "Updated Title",
-                content: "Updated Content",
             });
         expect(response.statusCode).toBe(200);
         expect(response.body.title).toBe("Updated Title");
     });
 
-    test("Update Post - Fail (Not Owner)", async () => {
+    test("Update Recipe - Fail (Not Owner)", async () => {
         const response = await request(app)
-            .put("/post/" + postId)
+            .put("/recipes/" + recipeId)
             .set("Authorization", "Bearer " + accessToken2)
             .send({
                 title: "Hacked Title",
-                content: "Hacked Content",
             });
         expect(response.statusCode).toBe(403);
     });
 
-    test("Update Post - Fail (Not Found)", async () => {
+    test("Update Recipe - Fail (Not Found)", async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
         const response = await request(app)
-            .put("/post/" + nonExistentId)
+            .put("/recipes/" + nonExistentId)
             .set("Authorization", "Bearer " + accessToken)
             .send({
                 title: "Updated Title",
@@ -139,39 +141,39 @@ describe("Post Tests", () => {
         expect(response.statusCode).toBe(404);
     });
 
-    test("Update Post - Fail (Invalid ID Format)", async () => {
+    test("Update Recipe - Fail (Invalid ID Format)", async () => {
         const response = await request(app)
-            .put("/post/invalid-id-123")
+            .put("/recipes/invalid-id-123")
             .set("Authorization", "Bearer " + accessToken)
             .send({ title: "Updated Title" });
         expect(response.statusCode).toBe(400);
     });
 
 
-    test("Delete Post - Fail (Not Owner)", async () => {
+    test("Delete Recipe - Fail (Not Owner)", async () => {
         const response = await request(app)
-            .delete("/post/" + postId)
+            .delete("/recipes/" + recipeId)
             .set("Authorization", "Bearer " + accessToken2);
         expect(response.statusCode).toBe(403);
     });
 
-    test("Delete Post - Fail (Invalid ID Format)", async () => {
+    test("Delete Recipe - Fail (Invalid ID Format)", async () => {
         const response = await request(app)
-            .delete("/post/invalid-id-123")
+            .delete("/recipes/invalid-id-123")
             .set("Authorization", "Bearer " + accessToken);
         expect(response.statusCode).toBe(400);
     });
 
-    test("Delete Post - Success", async () => {
+    test("Delete Recipe - Success", async () => {
         const response = await request(app)
-            .delete("/post/" + postId)
+            .delete("/recipes/" + recipeId)
             .set("Authorization", "Bearer " + accessToken);
         expect(response.statusCode).toBe(200);
     });
 
-    test("Delete Post - Fail (Not Found)", async () => {
+    test("Delete Recipe - Fail (Not Found)", async () => {
         const response = await request(app)
-            .delete("/post/" + postId)
+            .delete("/recipes/" + recipeId)
             .set("Authorization", "Bearer " + accessToken);
         expect(response.statusCode).toBe(404);
     });

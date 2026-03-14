@@ -3,6 +3,8 @@ services:
     image: mongo:latest
     container_name: assignment1_mongo
     restart: always
+    environment:
+      MONGO_INITDB_DATABASE: testshare
     ports:
       - "27017:27017"
     volumes:

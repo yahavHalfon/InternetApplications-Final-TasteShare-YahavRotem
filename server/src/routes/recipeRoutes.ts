@@ -1,64 +1,64 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware";
 const router = express.Router();
-import postController from "../controllers/postController";
+import recipeController from "../controllers/recipeController";
 
 /**
  * @swagger
  * tags:
- *   name: Posts
- *   description: The Posts managing API
+ *   name: Recipes
+ *   description: The Recipes managing API
  */
 
 /**
  * @swagger
- * /post:
+ * /recipes:
  *   get:
- *     summary: Returns the list of all the posts
- *     tags: [Posts]
+ *     summary: Returns the list of all recipes
+ *     tags: [Recipes]
  *     responses:
  *       200:
- *         description: The list of the posts
+ *         description: The list of recipes
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Post'
+ *                 $ref: '#/components/schemas/Recipe'
  */
-router.get("/", postController.get.bind(postController));
+router.get("/", recipeController.get.bind(recipeController));
 
 /**
  * @swagger
- * /post/{id}:
+ * /recipes/{id}:
  *   get:
- *     summary: Get the post by id
- *     tags: [Posts]
+ *     summary: Get the recipe by id
+ *     tags: [Recipes]
  *     parameters:
  *       - in: path
  *         name: id
  *         schema:
  *           type: string
  *         required: true
- *         description: The post id
+ *         description: The recipe id
  *     responses:
  *       200:
- *         description: The post description by id
+ *         description: The recipe description by id
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Post'
+ *               $ref: '#/components/schemas/Recipe'
  *       404:
- *         description: The post was not found
+ *         description: The recipe was not found
  */
-router.get("/:id", postController.getById.bind(postController));
+router.get("/:id", recipeController.getById.bind(recipeController));
 
 /**
  * @swagger
- * /post:
+ * /recipes:
  *   post:
- *     summary: Create a new post
- *     tags: [Posts]
+ *     summary: Create a new recipe
+ *     tags: [Recipes]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -68,33 +68,56 @@ router.get("/:id", postController.getById.bind(postController));
  *           schema:
  *             type: object
  *             required:
+ *               - image
  *               - title
- *               - content
+ *               - description
+ *               - ingredients
+ *               - instructions
+ *               - cookTime
+ *               - servings
+ *               - difficulty
  *             properties:
+ *               image:
+ *                 type: string
  *               title:
  *                 type: string
- *               content:
+ *               description:
  *                 type: string
+ *               ingredients:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               instructions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               cookTime:
+ *                 type: string
+ *               servings:
+ *                 type: number
+ *               difficulty:
+ *                 type: string
+ *                 enum: [Easy, Medium, Advanced]
  *     responses:
  *       201:
- *         description: The post was successfully created
+ *         description: The recipe was successfully created
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Post'
+ *               $ref: '#/components/schemas/Recipe'
  *       401:
  *         description: Unauthorized
  *       400:
  *         description: Bad request
  */
-router.post("/", authMiddleware, postController.create.bind(postController));
+router.post("/", authMiddleware, recipeController.create.bind(recipeController));
 
 /**
  * @swagger
- * /post/{id}:
+ * /recipes/{id}:
  *   put:
- *     summary: Update the post by id
- *     tags: [Posts]
+ *     summary: Update the recipe by id
+ *     tags: [Recipes]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -103,7 +126,7 @@ router.post("/", authMiddleware, postController.create.bind(postController));
  *         schema:
  *           type: string
  *         required: true
- *         description: The post id
+ *         description: The recipe id
  *     requestBody:
  *       required: true
  *       content:
@@ -111,32 +134,49 @@ router.post("/", authMiddleware, postController.create.bind(postController));
  *           schema:
  *             type: object
  *             properties:
+ *               image:
+ *                 type: string
  *               title:
  *                 type: string
- *               content:
+ *               description:
  *                 type: string
+ *               ingredients:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               instructions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               cookTime:
+ *                 type: string
+ *               servings:
+ *                 type: number
+ *               difficulty:
+ *                 type: string
+ *                 enum: [Easy, Medium, Advanced]
  *     responses:
  *       200:
- *         description: The post was updated
+ *         description: The recipe was updated
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Post'
+ *               $ref: '#/components/schemas/Recipe'
  *       401:
  *         description: Unauthorized
  *       403:
  *         description: Forbidden (Not the owner)
  *       404:
- *         description: The post was not found
+ *         description: The recipe was not found
  */
-router.put("/:id", authMiddleware, postController.put.bind(postController));
+router.put("/:id", authMiddleware, recipeController.put.bind(recipeController));
 
 /**
  * @swagger
- * /post/{id}:
+ * /recipes/{id}:
  *   delete:
- *     summary: Remove the post by id
- *     tags: [Posts]
+ *     summary: Remove the recipe by id
+ *     tags: [Recipes]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -145,17 +185,17 @@ router.put("/:id", authMiddleware, postController.put.bind(postController));
  *         schema:
  *           type: string
  *         required: true
- *         description: The post id
+ *         description: The recipe id
  *     responses:
  *       200:
- *         description: The post was deleted
+ *         description: The recipe was deleted
  *       401:
  *         description: Unauthorized
  *       403:
  *         description: Forbidden (Not the owner)
  *       404:
- *         description: The post was not found
+ *         description: The recipe was not found
  */
-router.delete("/:id", authMiddleware, postController.delete.bind(postController));
+router.delete("/:id", authMiddleware, recipeController.delete.bind(recipeController));
 
 export default router;

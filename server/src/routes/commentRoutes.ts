@@ -68,12 +68,12 @@ router.get("/:id", commentController.getById.bind(commentController));
  *           schema:
  *             type: object
  *             required:
- *               - postId
- *               - message
+ *               - recipeId
+ *               - text
  *             properties:
- *               postId:
+ *               recipeId:
  *                 type: string
- *               message:
+ *               text:
  *                 type: string
  *     responses:
  *       201:
@@ -111,7 +111,7 @@ router.post("/", authMiddleware, commentController.create.bind(commentController
  *           schema:
  *             type: object
  *             properties:
- *               message:
+ *               text:
  *                 type: string
  *     responses:
  *       200:

@@ -3,7 +3,7 @@ import initApp from "../index";
 import mongoose from "mongoose";
 import { Express } from "express";
 import userModel from "../model/userModel";
-import postModel from "../model/postModel";
+import recipeModel from "../model/recipeModel";
 import commentModel from "../model/commentModel";
 
 let app: Express;
@@ -19,12 +19,12 @@ const testUser2 = {
 let accessToken: string;
 let accessToken2: string;
 let userId: string;
-let postId: string;
+let recipeId: string;
 
 beforeAll(async () => {
     app = await initApp();
     await userModel.deleteMany();
-    await postModel.deleteMany();
+    await recipeModel.deleteMany();
     await commentModel.deleteMany();
 });
 
@@ -49,17 +49,22 @@ describe("Comment Tests", () => {
         accessToken2 = response.body.token;
     });
 
-    test("Post Setup: Create Test Post", async () => {
+    test("Recipe Setup: Create Test Recipe", async () => {
         const response = await request(app)
-            .post("/post")
+            .post("/recipes")
             .set("Authorization", "Bearer " + accessToken)
             .send({
-                title: "Test Post for Comments",
-                content: "This post will be used for comment tests",
-                sender: "Test Sender",
+                image: "https://example.com/recipe.jpg",
+                title: "Test Recipe for Comments",
+                description: "This recipe will be used for comment tests",
+                ingredients: ["1 cup flour"],
+                instructions: ["Mix ingredients"],
+                cookTime: "25 min",
+                servings: 2,
+                difficulty: "Easy",
             });
         expect(response.statusCode).toBe(201);
-        postId = response.body._id;
+        recipeId = response.body._id;
     });
 
 
@@ -70,42 +75,42 @@ describe("Comment Tests", () => {
             .post("/comments")
             .set("Authorization", "Bearer " + accessToken)
             .send({
-                postId: postId,
-                message: "Test Comment",
+                recipeId: recipeId,
+                text: "Test Comment",
             });
         expect(response.statusCode).toBe(201);
-        expect(response.body.sender).toBe(userId);
-        expect(response.body.postId).toBe(postId);
+        expect(response.body.userId).toBe(userId);
+        expect(response.body.recipeId).toBe(recipeId);
         commentId = response.body._id;
     });
 
     test("Create Comment - Fail (No Auth)", async () => {
         const response = await request(app).post("/comments").send({
-            postId: postId,
-            message: "Test Comment",
+            recipeId: recipeId,
+            text: "Test Comment",
         });
         expect(response.statusCode).toBe(401);
     });
 
-    test("Create Comment - Fail (Post Not Found)", async () => {
+    test("Create Comment - Fail (Recipe Not Found)", async () => {
         const nonExistentId = new mongoose.Types.ObjectId();
         const response = await request(app)
             .post("/comments")
             .set("Authorization", "Bearer " + accessToken)
             .send({
-                postId: nonExistentId,
-                message: "Test Comment",
+                recipeId: nonExistentId,
+                text: "Test Comment",
             });
         expect(response.statusCode).toBe(404);
     });
 
-    test("Create Comment - Fail (Invalid Post ID)", async () => {
+    test("Create Comment - Fail (Invalid Recipe ID)", async () => {
         const response = await request(app)
             .post("/comments")
             .set("Authorization", "Bearer " + accessToken)
             .send({
-                postId: "invalid-id-123",
-                message: "Test Comment",
+                recipeId: "invalid-id-123",
+                text: "Test Comment",
             });
         // BaseController/CommentController handles CastError -> 400
         expect(response.statusCode).toBe(400);
@@ -135,10 +140,10 @@ describe("Comment Tests", () => {
             .put("/comments/" + commentId)
             .set("Authorization", "Bearer " + accessToken)
             .send({
-                message: "Updated Comment",
+                text: "Updated Comment",
             });
         expect(response.statusCode).toBe(200);
-        expect(response.body.message).toBe("Updated Comment");
+        expect(response.body.text).toBe("Updated Comment");
     });
 
     test("Update Comment - Fail (Not Owner)", async () => {
@@ -146,7 +151,7 @@ describe("Comment Tests", () => {
             .put("/comments/" + commentId)
             .set("Authorization", "Bearer " + accessToken2)
             .send({
-                message: "Hacked Comment",
+                text: "Hacked Comment",
             });
         expect(response.statusCode).toBe(403);
     });
@@ -157,7 +162,7 @@ describe("Comment Tests", () => {
             .put("/comments/" + nonExistentId)
             .set("Authorization", "Bearer " + accessToken)
             .send({
-                message: "Updated Comment",
+                text: "Updated Comment",
             });
         expect(response.statusCode).toBe(404);
     });
@@ -166,7 +171,7 @@ describe("Comment Tests", () => {
         const response = await request(app)
             .put("/comments/invalid-id-123")
             .set("Authorization", "Bearer " + accessToken)
-            .send({ message: "Updated" });
+            .send({ text: "Updated" });
         expect(response.statusCode).toBe(400);
     });
 

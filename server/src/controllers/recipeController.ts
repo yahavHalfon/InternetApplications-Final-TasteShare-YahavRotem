@@ -1,40 +1,43 @@
-import Post from "../model/postModel";
-import baseController from "./baseController";
+import Recipe from "../model/recipeModel";
+import type { IRecipe } from "../model/recipeModel";
+import BaseController from "./baseController";
 
 import CommentModel from "../model/commentModel";
 import { Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 
-class PostController extends baseController {
+class RecipeController extends BaseController<IRecipe> {
     constructor() {
-        super(Post);
+        super(Recipe);
     }
 
     async create(req: AuthRequest, res: Response) {
         const userId = req.user?._id;
         if (!userId) {
-            return;
+            return res.status(401).json({ error: "Unauthorized" });
         }
-        req.body.sender = userId;
-        super.create(req, res);
+
+        req.body.userId = userId;
+        return super.create(req, res);
     }
 
     async put(req: AuthRequest, res: Response) {
         const id = req.params.id;
         const userId = req.user?._id;
         try {
-            const post = await Post.findById(id);
-            if (!post) {
-                res.status(404).json({ error: "Post not found" });
+            const recipe = await Recipe.findById(id);
+            if (!recipe) {
+                res.status(404).json({ error: "Recipe not found" });
                 return;
             }
-            if (post.sender !== userId) {
-                res.status(403).json({ error: "Unauthorized: You can only update your own posts" });
+
+            if (recipe.userId.toString() !== userId) {
+                res.status(403).json({ error: "Unauthorized: You can only update your own recipes" });
                 return;
             }
-            super.put(req, res);
+            return super.put(req, res);
         } catch (error) {
-            this.handleError(res, error);
+            return this.handleError(res, error);
         }
     }
 
@@ -42,19 +45,21 @@ class PostController extends baseController {
         const id = req.params.id;
         const userId = req.user?._id;
         try {
-            const post = await Post.findById(id);
-            if (!post) {
-                return res.status(404).json({ error: "Post not found" });
+            const recipe = await Recipe.findById(id);
+            if (!recipe) {
+                return res.status(404).json({ error: "Recipe not found" });
             }
-            if (post.sender !== userId) {
-                return res.status(403).json({ error: "Unauthorized: You can only delete your own posts" });
+
+            if (recipe.userId.toString() !== userId) {
+                return res.status(403).json({ error: "Unauthorized: You can only delete your own recipes" });
             }
-            await CommentModel.deleteMany({ postId: id });
+
+            await CommentModel.deleteMany({ recipeId: id });
             return super.delete(req, res);
         } catch (error) {
-            this.handleError(res, error);
+            return this.handleError(res, error);
         }
     }
 }
 
-export default new PostController();
+export default new RecipeController();

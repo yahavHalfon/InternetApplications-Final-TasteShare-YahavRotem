@@ -4,12 +4,13 @@ export interface IUser {
     email: string;
     password: string;
     refreshTokens: string[];
+    name: string;
     username: string;
     avatarUrl: string;
     bio: string;
     website: string;
     location: string;
-    savedPosts: Types.ObjectId[];
+    savedRecipes: Types.ObjectId[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -30,6 +31,11 @@ const userSchema = new Schema<IUser>(
         refreshTokens: {
             type: [String],
             default: [],
+        },
+        name: {
+            type: String,
+            default: "",
+            trim: true,
         },
         username: {
             type: String,
@@ -56,10 +62,10 @@ const userSchema = new Schema<IUser>(
             default: "",
             trim: true,
         },
-        savedPosts: [
+        savedRecipes: [
             {
                 type: Schema.Types.ObjectId,
-                ref: "Post",
+                ref: "Recipe",
             },
         ],
     },
@@ -68,6 +74,6 @@ const userSchema = new Schema<IUser>(
     }
 );
 
-userSchema.path("savedPosts").default(() => []);
+userSchema.path("savedRecipes").default(() => []);
 
 export default model<IUser>("User", userSchema);
