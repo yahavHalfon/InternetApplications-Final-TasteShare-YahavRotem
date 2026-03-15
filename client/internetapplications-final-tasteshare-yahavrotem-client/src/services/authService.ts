@@ -20,31 +20,21 @@ type LoginPayload = {
   password: string;
 };
 
-type RegisterPayload = {
-  email: string;
-  password: string;
-  name: string;
-  username: string;
-  bio: string;
-  location: string;
-  website: string;
-  avatarUrl: string;
-};
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 const post = async (
   path: string,
-  payload: object,
+  payload: FormData | Record<string, unknown>,
   token?: string,
 ): Promise<AuthSession> => {
+  const isFormData = payload instanceof FormData;
   const response = await fetch(`${API_BASE_URL}/auth/${path}`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify(payload),
+    body: isFormData ? payload : JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -58,7 +48,7 @@ const post = async (
 
 export const authService = {
   login: (payload: LoginPayload) => post("login", payload),
-  register: (payload: RegisterPayload) => post("register", payload),
+  register: (payload: FormData) => post("register", payload),
   refreshToken: (refreshToken: string) => post("refresh", { refreshToken }),
   googleSignIn: (credential: string) => post("google", { credential }),
   logout: async (refreshToken: string, token: string) => {

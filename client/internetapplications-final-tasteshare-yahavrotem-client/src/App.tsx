@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import {
   ArrowLeft,
@@ -27,7 +27,9 @@ type Notification = {
 } | null;
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
-const AUTH_STORAGE_KEY = "tasteShare.auth.session";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+const ACCESS_TOKEN_STORAGE_KEY = "accessToken";
+const REFRESH_TOKEN_STORAGE_KEY = "refreshToken";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const normalizeUsername = (value: string): string => {
@@ -39,6 +41,13 @@ const normalizeUsername = (value: string): string => {
     .slice(0, 30);
 };
 
+const toApiAssetUrl = (assetPath?: string): string => {
+  if (!assetPath) {
+    return "";
+  }
+  return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
+};
+
 function App() {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [registerStep, setRegisterStep] = useState<RegisterStep>(1);
@@ -48,6 +57,7 @@ function App() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [notification, setNotification] = useState<Notification>(null);
   const [session, setSession] = useState<AuthSession | null>(null);
+  const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,7 +66,8 @@ function App() {
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [website, setWebsite] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
 
   useEffect(() => {
     if (!notification) {
@@ -70,48 +81,70 @@ function App() {
     };
   }, [notification]);
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) {
+        URL.revokeObjectURL(avatarPreviewUrl);
+      }
+    };
+  }, [avatarPreviewUrl]);
+
   const notify = (type: "success" | "error", message: string) => {
     setNotification({ type, message });
   };
 
-  const clearSession = () => {
+  const clearSession = useCallback(() => {
     setSession(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-  };
+    localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+  }, []);
 
-  const saveSession = (nextSession: AuthSession) => {
+  const saveSession = useCallback((nextSession: AuthSession) => {
     setSession(nextSession);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession));
-  };
+    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, nextSession.token);
+    localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, nextSession.refreshToken);
+  }, []);
 
-  useEffect(() => {
-    const restoreSession = async () => {
-      const rawSession = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (!rawSession) {
-        setIsInitializing(false);
-        return;
+  const validateAndRefreshToken = useCallback(async (): Promise<boolean> => {
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
+    }
+
+    const doValidate = async (): Promise<boolean> => {
+      const currentRefreshToken = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+
+      if (!currentRefreshToken) {
+        return false;
       }
 
       try {
-        const parsed = JSON.parse(rawSession) as Partial<AuthSession>;
-        if (!parsed.refreshToken) {
-          clearSession();
-          setIsInitializing(false);
-          return;
-        }
-
-        const refreshedSession = await authService.refreshToken(parsed.refreshToken);
-
+        const refreshedSession = await authService.refreshToken(currentRefreshToken);
         saveSession(refreshedSession);
+        return true;
       } catch {
         clearSession();
-      } finally {
-        setIsInitializing(false);
+        return false;
       }
     };
 
+    refreshPromiseRef.current = doValidate().finally(() => {
+      refreshPromiseRef.current = null;
+    });
+
+    return refreshPromiseRef.current;
+  }, [clearSession, saveSession]);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const isValid = await validateAndRefreshToken();
+      if (!isValid) {
+        clearSession();
+      }
+      setIsInitializing(false);
+    };
+
     void restoreSession();
-  }, []);
+  }, [clearSession, validateAndRefreshToken]);
 
   const validateCredentials = (): boolean => {
     if (!emailPattern.test(email.trim().toLowerCase())) {
@@ -166,16 +199,19 @@ function App() {
 
     setIsSubmitting(true);
     try {
-      const authSession = await authService.register({
-        email: email.trim().toLowerCase(),
-        password,
-        name: name.trim(),
-        username: normalizeUsername(username || name),
-        bio: bio.trim(),
-        location: location.trim(),
-        website: website.trim(),
-        avatarUrl,
-      });
+      const formData = new FormData();
+      formData.append("email", email.trim().toLowerCase());
+      formData.append("password", password);
+      formData.append("name", name.trim());
+      formData.append("username", normalizeUsername(username || name));
+      formData.append("bio", bio.trim());
+      formData.append("location", location.trim());
+      formData.append("website", website.trim());
+      if (avatarFile) {
+        formData.append("profileImage", avatarFile);
+      }
+
+      const authSession = await authService.register(formData);
       saveSession(authSession);
       notify("success", "Your account has been created successfully.");
     } catch (error) {
@@ -205,11 +241,17 @@ function App() {
     }
   };
 
-  const handleAvatarClick = () => {
-    const preview = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      name || "User",
-    )}&background=E8634F&color=fff&size=128&bold=true`;
-    setAvatarUrl(preview);
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (avatarPreviewUrl) {
+      URL.revokeObjectURL(avatarPreviewUrl);
+    }
+    setAvatarFile(file);
+    setAvatarPreviewUrl(URL.createObjectURL(file));
   };
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
@@ -282,7 +324,7 @@ function App() {
           <div className="profile-preview">
             <div className="profile-avatar">
               {session.user.avatarUrl ? (
-                <img src={session.user.avatarUrl} alt="avatar" />
+                <img src={toApiAssetUrl(session.user.avatarUrl)} alt="avatar" />
               ) : (
                 <User size={28} color="#a3a3a3" />
               )}
@@ -482,15 +524,22 @@ function App() {
 
             <form className="profile-form" onSubmit={handleRegister}>
               <div className="avatar-block">
-                <button type="button" className="avatar-button" onClick={handleAvatarClick}>
+                <label htmlFor="profileImage" className="avatar-button">
                   <div className="avatar-preview">
-                    {avatarUrl ? <img src={avatarUrl} alt="Avatar" /> : <User size={32} color="#c4c4c4" />}
+                    {avatarPreviewUrl ? <img src={avatarPreviewUrl} alt="Avatar" /> : <User size={32} color="#c4c4c4" />}
                   </div>
                   <div className="avatar-camera">
                     <Camera size={14} color="#ffffff" />
                   </div>
-                </button>
-                <p>{avatarUrl ? "Tap to change photo" : "Upload a profile photo"}</p>
+                </label>
+                <input
+                  id="profileImage"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  style={{ display: "none" }}
+                />
+                <p>{avatarFile ? "Tap to change photo" : "Upload a profile photo"}</p>
               </div>
 
               <div>

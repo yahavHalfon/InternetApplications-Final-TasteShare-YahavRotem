@@ -96,7 +96,11 @@ export const register = async (req: Request, res: Response) => {
     const bio = typeof req.body.bio === "string" ? req.body.bio.trim() : "";
     const location = typeof req.body.location === "string" ? req.body.location.trim() : "";
     const website = typeof req.body.website === "string" ? req.body.website.trim() : "";
-    const avatarUrl = typeof req.body.avatarUrl === "string" ? req.body.avatarUrl.trim() : "";
+    const avatarUrl = req.file
+        ? `/uploads/${req.file.filename}`
+        : typeof req.body.avatarUrl === "string"
+            ? req.body.avatarUrl.trim()
+            : "";
 
     if (!email || !password) {
         return sendError(400, "Email and password are required", res);

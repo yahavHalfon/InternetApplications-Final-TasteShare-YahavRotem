@@ -1,6 +1,8 @@
 import express, { Express } from "express";
 import morgan from "morgan";
 import mongoose from "mongoose";
+import fs from "fs";
+import path from "path";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.dev" });
 import authRoute from "./routes/authRoutes";
@@ -10,8 +12,12 @@ import commentRoutes from "./routes/commentRoutes";
 import userRoutes from "./routes/userRoutes";
 
 const app = express();
+const UPLOADS_DIR = path.resolve(__dirname, "../uploads");
 app.use(express.json());
 app.use(morgan("common"));
+
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+app.use("/uploads", express.static(UPLOADS_DIR));
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
