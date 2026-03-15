@@ -1,121 +1,591 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from "react";
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  Check,
+  ChefHat,
+  Eye,
+  EyeOff,
+  Link2,
+  Lock,
+  LogOut,
+  Mail,
+  MapPin,
+  User,
+} from "lucide-react";
+import { authService, type AuthSession } from "./services/authService";
+import "./App.css";
+
+type AuthMode = "login" | "register";
+type RegisterStep = 1 | 2;
+
+type Notification = {
+  type: "success" | "error";
+  message: string;
+} | null;
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+const AUTH_STORAGE_KEY = "tasteShare.auth.session";
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeUsername = (value: string): string => {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9._]/g, "")
+    .slice(0, 30);
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [registerStep, setRegisterStep] = useState<RegisterStep>(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [notification, setNotification] = useState<Notification>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
+  const [location, setLocation] = useState("");
+  const [website, setWebsite] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  useEffect(() => {
+    if (!notification) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setNotification(null);
+    }, 4000);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [notification]);
+
+  const notify = (type: "success" | "error", message: string) => {
+    setNotification({ type, message });
+  };
+
+  const clearSession = () => {
+    setSession(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  };
+
+  const saveSession = (nextSession: AuthSession) => {
+    setSession(nextSession);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession));
+  };
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      const rawSession = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (!rawSession) {
+        setIsInitializing(false);
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(rawSession) as Partial<AuthSession>;
+        if (!parsed.refreshToken) {
+          clearSession();
+          setIsInitializing(false);
+          return;
+        }
+
+        const refreshedSession = await authService.refreshToken(parsed.refreshToken);
+
+        saveSession(refreshedSession);
+      } catch {
+        clearSession();
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    void restoreSession();
+  }, []);
+
+  const validateCredentials = (): boolean => {
+    if (!emailPattern.test(email.trim().toLowerCase())) {
+      notify("error", "Please enter a valid email address.");
+      return false;
+    }
+    if (password.length < 8) {
+      notify("error", "Password must be at least 8 characters.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!validateCredentials()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const authSession = await authService.login({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      saveSession(authSession);
+      notify("success", "You are now logged in.");
+    } catch (error) {
+      notify("error", error instanceof Error ? error.message : "Login failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleNextRegisterStep = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!validateCredentials()) {
+      return;
+    }
+    setRegisterStep(2);
+  };
+
+  const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!validateCredentials()) {
+      return;
+    }
+    if (!name.trim()) {
+      notify("error", "Please provide your full name.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const authSession = await authService.register({
+        email: email.trim().toLowerCase(),
+        password,
+        name: name.trim(),
+        username: normalizeUsername(username || name),
+        bio: bio.trim(),
+        location: location.trim(),
+        website: website.trim(),
+        avatarUrl,
+      });
+      saveSession(authSession);
+      notify("success", "Your account has been created successfully.");
+    } catch (error) {
+      notify("error", error instanceof Error ? error.message : "Registration failed.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!session) {
+      return;
+    }
+
+    try {
+      await authService.logout(
+        session.refreshToken,
+        session.token,
+      );
+    } catch {
+      // The client still clears local session when server-side logout fails.
+    } finally {
+      clearSession();
+      notify("success", "You have been logged out.");
+      setAuthMode("login");
+      setRegisterStep(1);
+    }
+  };
+
+  const handleAvatarClick = () => {
+    const preview = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      name || "User",
+    )}&background=E8634F&color=fff&size=128&bold=true`;
+    setAvatarUrl(preview);
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    const credential = credentialResponse.credential;
+    if (!credential) {
+      notify("error", "Google sign-in did not return a credential.");
+      setIsGoogleLoading(false);
+      return;
+    }
+
+    try {
+      const authSession = await authService.googleSignIn(credential);
+      saveSession(authSession);
+      notify("success", "Google sign-in completed successfully.");
+    } catch (error) {
+      notify("error", error instanceof Error ? error.message : "Google sign-in failed.");
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setIsGoogleLoading(false);
+    notify("error", "Google sign-in failed.");
+  };
+
+  const renderGoogleLogin = () => {
+    if (!GOOGLE_CLIENT_ID) {
+      return <p className="google-config-warning">Google sign-in is not configured.</p>;
+    }
+
+    return (
+      <>
+        <div className="google-login-wrap">
+          <GoogleLogin
+            onSuccess={(response: CredentialResponse) => {
+              setIsGoogleLoading(true);
+              void handleGoogleSuccess(response);
+            }}
+            onError={handleGoogleError}
+          />
+        </div>
+        {isGoogleLoading ? <p className="google-loading">Signing in with Google...</p> : null}
+      </>
+    );
+  };
+
+  if (isInitializing) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card auth-card-loading">Restoring your session...</div>
+      </div>
+    );
+  }
+
+  if (session) {
+    return (
+      <div className="auth-page">
+        {notification ? (
+          <div className={`notification notification-${notification.type}`}>{notification.message}</div>
+        ) : null}
+
+        <div className="auth-card auth-card-success">
+          <div className="brand-icon">
+            <ChefHat size={28} color="#ffffff" />
+          </div>
+          <h1 className="brand-title">TasteShare</h1>
+          <p className="brand-subtitle">You are connected as {session.user.email}</p>
+
+          <div className="profile-preview">
+            <div className="profile-avatar">
+              {session.user.avatarUrl ? (
+                <img src={session.user.avatarUrl} alt="avatar" />
+              ) : (
+                <User size={28} color="#a3a3a3" />
+              )}
+            </div>
+            <div className="profile-meta">
+              <strong>{session.user.name || "TasteShare User"}</strong>
+              <span>@{session.user.username || "user"}</span>
+            </div>
+          </div>
+
+          <button type="button" className="btn-gradient" onClick={handleLogout}>
+            <LogOut size={16} />
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isRegisterStepTwo = authMode === "register" && registerStep === 2;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+    <div className="auth-page">
+      {notification ? (
+        <div className={`notification notification-${notification.type}`}>{notification.message}</div>
+      ) : null}
+
+      <div className={`auth-card ${isRegisterStepTwo ? "auth-card-wide" : ""}`}>
+        <div className="brand-block">
+          <div className="brand-icon">
+            <ChefHat size={28} color="#ffffff" />
+          </div>
+          <h1 className="brand-title">TasteShare</h1>
+          <p className="brand-subtitle">
+            {authMode === "login"
+              ? "Welcome back, chef!"
+              : registerStep === 1
+                ? "Create your account"
+                : "Set up your chef profile"}
           </p>
         </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
+        {authMode === "login" ? (
+          <div>
+            <form className="auth-form" onSubmit={handleLogin}>
+              <div className="input-with-icon">
+                <Mail size={17} className="input-icon" />
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="auth-input"
+                />
+              </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
+              <div className="input-with-icon">
+                <Lock size={17} className="input-icon" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="auth-input auth-input-password"
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowPassword((value) => !value)}
                 >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+              <div className="forgot-row">
+                <button type="button" className="text-link">
+                  Forgot password?
+                </button>
+              </div>
+
+              <button type="submit" className="btn-gradient" disabled={isSubmitting}>
+                {isSubmitting ? "Signing in..." : "Sign In"}
+              </button>
+            </form>
+
+            <div className="auth-divider">
+              <div />
+              <span>or</span>
+              <div />
+            </div>
+
+            {renderGoogleLogin()}
+
+            <div className="switch-mode">
+              <span>Don't have an account? </span>
+              <button
+                type="button"
+                className="text-link"
+                onClick={() => {
+                  setAuthMode("register");
+                  setRegisterStep(1);
+                }}
+              >
+                Sign Up
+              </button>
+            </div>
+          </div>
+        ) : registerStep === 1 ? (
+          <div>
+            <div className="step-indicator">
+              <div className="step-group">
+                <div className="step-circle step-circle-active">1</div>
+                <span className="step-label step-label-active">Account</span>
+              </div>
+              <div className="step-line" />
+              <div className="step-group">
+                <div className="step-circle">2</div>
+                <span className="step-label">Profile</span>
+              </div>
+            </div>
+
+            <form className="auth-form" onSubmit={handleNextRegisterStep}>
+              <div className="input-with-icon">
+                <Mail size={17} className="input-icon" />
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="auth-input"
+                  required
+                />
+              </div>
+
+              <div className="input-with-icon">
+                <Lock size={17} className="input-icon" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="auth-input auth-input-password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+
+              <button type="submit" className="btn-gradient">
+                Continue
+                <ArrowRight size={16} />
+              </button>
+            </form>
+
+            <div className="auth-divider">
+              <div />
+              <span>or</span>
+              <div />
+            </div>
+
+            {renderGoogleLogin()}
+
+            <div className="switch-mode">
+              <span>Already have an account? </span>
+              <button
+                type="button"
+                className="text-link"
+                onClick={() => {
+                  setAuthMode("login");
+                  setRegisterStep(1);
+                }}
+              >
+                Sign In
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="step-indicator">
+              <div className="step-group">
+                <div className="step-circle step-circle-active">
+                  <Check size={14} />
+                </div>
+                <span className="step-label step-label-active">Account</span>
+              </div>
+              <div className="step-line" />
+              <div className="step-group">
+                <div className="step-circle step-circle-active">2</div>
+                <span className="step-label step-label-active">Profile</span>
+              </div>
+            </div>
+
+            <form className="profile-form" onSubmit={handleRegister}>
+              <div className="avatar-block">
+                <button type="button" className="avatar-button" onClick={handleAvatarClick}>
+                  <div className="avatar-preview">
+                    {avatarUrl ? <img src={avatarUrl} alt="Avatar" /> : <User size={32} color="#c4c4c4" />}
+                  </div>
+                  <div className="avatar-camera">
+                    <Camera size={14} color="#ffffff" />
+                  </div>
+                </button>
+                <p>{avatarUrl ? "Tap to change photo" : "Upload a profile photo"}</p>
+              </div>
+
+              <div>
+                <label>Full Name</label>
+                <div className="input-with-icon">
+                  <User size={17} className="input-icon" />
+                  <input
+                    type="text"
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      if (!username) {
+                        setUsername(normalizeUsername(event.target.value));
+                      }
+                    }}
+                    className="auth-input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label>Username</label>
+                <div className="input-with-icon input-with-prefix">
+                  <span className="prefix">@</span>
+                  <input
+                    type="text"
+                    placeholder="yourname"
+                    value={username}
+                    onChange={(event) => setUsername(normalizeUsername(event.target.value))}
+                    className="auth-input auth-input-username"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label>Bio</label>
+                <div className="bio-wrap">
+                  <textarea
+                    placeholder="Tell the community about yourself, your cooking style, your favorite cuisines..."
+                    rows={3}
+                    maxLength={200}
+                    value={bio}
+                    onChange={(event) => setBio(event.target.value)}
+                  />
+                  <span>{bio.length}/200</span>
+                </div>
+              </div>
+
+              <div className="grid-two">
+                <div>
+                  <label>Location</label>
+                  <div className="input-with-icon input-small-icon">
+                    <MapPin size={15} className="input-icon" />
+                    <input
+                      type="text"
+                      placeholder="City, Country"
+                      value={location}
+                      onChange={(event) => setLocation(event.target.value)}
+                      className="auth-input"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label>Website</label>
+                  <div className="input-with-icon input-small-icon">
+                    <Link2 size={15} className="input-icon" />
+                    <input
+                      type="text"
+                      placeholder="yoursite.com"
+                      value={website}
+                      onChange={(event) => setWebsite(event.target.value)}
+                      className="auth-input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="action-row">
+                <button type="button" className="btn-secondary" onClick={() => setRegisterStep(1)}>
+                  <ArrowLeft size={16} />
+                  Back
+                </button>
+                <button type="submit" className="btn-gradient" disabled={isSubmitting}>
+                  <ChefHat size={16} />
+                  {isSubmitting ? "Creating..." : "Create Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;

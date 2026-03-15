@@ -1,5 +1,5 @@
 import express from "express";
-import authController from "../controllers/authController";
+import * as authController from "../controllers/authController";
 import authMiddleware from "../middleware/authMiddleware";
 
 const router = express.Router();
@@ -80,6 +80,33 @@ router.post("/login", authController.login);
 
 /**
  * @swagger
+ * /auth/google:
+ *   post:
+ *     summary: Authenticate with Google ID token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - credential
+ *             properties:
+ *               credential:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Invalid Google credential
+ */
+router.post("/google", authController.googleSignIn);
+
+/**
+ * @swagger
  * /auth/logout:
  *   post:
  *     summary: Logout from the application
@@ -128,6 +155,6 @@ router.post("/logout", authMiddleware, authController.logout);
  *       401:
  *         description: Invalid refresh token
  */
-router.post("/refresh", authController.refreshToken);
+router.post("/refresh", authController.refresh);
 
 export default router;
