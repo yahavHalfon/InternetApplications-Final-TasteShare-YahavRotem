@@ -399,12 +399,6 @@ function App() {
                 </button>
               </div>
 
-              <div className="forgot-row">
-                <button type="button" className="text-link">
-                  Forgot password?
-                </button>
-              </div>
-
               <button type="submit" className="btn-gradient" disabled={isSubmitting}>
                 {isSubmitting ? "Signing in..." : "Sign In"}
               </button>

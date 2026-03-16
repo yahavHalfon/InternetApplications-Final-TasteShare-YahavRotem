@@ -131,12 +131,6 @@
   color: #6b7280;
 }
 
-.forgot-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 2px;
-}
-
 .text-link {
   all: unset;
   color: #f97316;
