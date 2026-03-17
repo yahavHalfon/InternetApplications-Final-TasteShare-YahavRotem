@@ -1,6 +1,7 @@
 import express from "express";
-import authController from "../controllers/authController";
+import * as authController from "../controllers/authController";
 import authMiddleware from "../middleware/authMiddleware";
+import { upload } from "../middleware/upload";
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ const router = express.Router();
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -32,13 +33,16 @@ const router = express.Router();
  *                 format: email
  *               password:
  *                 type: string
+ *               profileImage:
+ *                 type: string
+ *                 format: binary
  *     responses:
  *       201:
  *         description: User created successfully
  *       400:
  *         description: User already exists or invalid input
  */
-router.post("/register", authController.register);
+router.post("/register", upload.single("profileImage"), authController.register);
 
 /**
  * @swagger
@@ -77,6 +81,33 @@ router.post("/register", authController.register);
  *         description: Invalid credentials
  */
 router.post("/login", authController.login);
+
+/**
+ * @swagger
+ * /auth/google:
+ *   post:
+ *     summary: Authenticate with Google ID token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - credential
+ *             properties:
+ *               credential:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Invalid Google credential
+ */
+router.post("/google", authController.googleSignIn);
 
 /**
  * @swagger
@@ -128,6 +159,6 @@ router.post("/logout", authMiddleware, authController.logout);
  *       401:
  *         description: Invalid refresh token
  */
-router.post("/refresh", authController.refreshToken);
+router.post("/refresh", authController.refresh);
 
 export default router;

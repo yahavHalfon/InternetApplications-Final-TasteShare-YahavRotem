@@ -21,8 +21,8 @@ Ensure you have a `.env.dev` file in the root directory with the following conte
 
 ```properties
 PORT=3000
-MONGODB_URI=mongodb://localhost:27017/testshare
-JWT_SECRET=YahavRotemTokenSecret123!
+MONGODB_URI=mongodb://localhost:27017/tasteshare
+JWT_SECRET=replace_with_your_jwt_secret
 JWT_EXPIRES_IN=3600
 REFRESH_TOKEN_EXPIRES_IN=28800
 ```
