@@ -15,6 +15,7 @@ import {
   MapPin,
   User,
 } from "lucide-react";
+import { API_BASE_URL, GOOGLE_CLIENT_ID } from "./config/env";
 import { authService, type AuthSession } from "./services/authService";
 import "./App.css";
 
@@ -26,8 +27,6 @@ type Notification = {
   message: string;
 } | null;
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 const ACCESS_TOKEN_STORAGE_KEY = "accessToken";
 const REFRESH_TOKEN_STORAGE_KEY = "refreshToken";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

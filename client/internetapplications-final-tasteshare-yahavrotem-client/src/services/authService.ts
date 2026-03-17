@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "../config/env";
+
 type AuthUser = {
   id: string;
   email: string;
@@ -19,8 +21,6 @@ type LoginPayload = {
   email: string;
   password: string;
 };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
 const post = async (
   path: string,
