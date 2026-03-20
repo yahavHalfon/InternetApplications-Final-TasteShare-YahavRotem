@@ -10,13 +10,13 @@ import {
   EyeOff,
   Link2,
   Lock,
-  LogOut,
   Mail,
   MapPin,
   User,
 } from "lucide-react";
-import { API_BASE_URL, GOOGLE_CLIENT_ID } from "./config/env";
+import { GOOGLE_CLIENT_ID } from "./config/env";
 import { authService, type AuthSession } from "./services/authService";
+import Feed from "./pages/Feed";
 import "./App.css";
 
 type AuthMode = "login" | "register";
@@ -38,13 +38,6 @@ const normalizeUsername = (value: string): string => {
     .replace(/\s+/g, "")
     .replace(/[^a-z0-9._]/g, "")
     .slice(0, 30);
-};
-
-const toApiAssetUrl = (assetPath?: string): string => {
-  if (!assetPath) {
-    return "";
-  }
-  return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
 };
 
 function App() {
@@ -220,26 +213,6 @@ function App() {
     }
   };
 
-  const handleLogout = async () => {
-    if (!session) {
-      return;
-    }
-
-    try {
-      await authService.logout(
-        session.refreshToken,
-        session.token,
-      );
-    } catch {
-      // The client still clears local session when server-side logout fails.
-    } finally {
-      clearSession();
-      notify("success", "You have been logged out.");
-      setAuthMode("login");
-      setRegisterStep(1);
-    }
-  };
-
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
@@ -298,6 +271,18 @@ function App() {
     );
   };
 
+  const handleLogout = async () => {
+    if (session) {
+      try {
+        await authService.logout(session.refreshToken, session.token);
+      } catch (error) {
+        console.error("Logout error", error);
+      }
+    }
+    clearSession();
+    notify("success", "You have been logged out.");
+  };
+
   if (isInitializing) {
     return (
       <div className="auth-page">
@@ -307,40 +292,7 @@ function App() {
   }
 
   if (session) {
-    return (
-      <div className="auth-page">
-        {notification ? (
-          <div className={`notification notification-${notification.type}`}>{notification.message}</div>
-        ) : null}
-
-        <div className="auth-card auth-card-success">
-          <div className="brand-icon">
-            <ChefHat size={28} color="#ffffff" />
-          </div>
-          <h1 className="brand-title">TasteShare</h1>
-          <p className="brand-subtitle">You are connected as {session.user.email}</p>
-
-          <div className="profile-preview">
-            <div className="profile-avatar">
-              {session.user.avatarUrl ? (
-                <img src={toApiAssetUrl(session.user.avatarUrl)} alt="avatar" />
-              ) : (
-                <User size={28} color="#a3a3a3" />
-              )}
-            </div>
-            <div className="profile-meta">
-              <strong>{session.user.name || "TasteShare User"}</strong>
-              <span>@{session.user.username || "user"}</span>
-            </div>
-          </div>
-
-          <button type="button" className="btn-gradient" onClick={handleLogout}>
-            <LogOut size={16} />
-            Logout
-          </button>
-        </div>
-      </div>
-    );
+    return <Feed onLogout={handleLogout} />;
   }
 
   const isRegisterStepTwo = authMode === "register" && registerStep === 2;

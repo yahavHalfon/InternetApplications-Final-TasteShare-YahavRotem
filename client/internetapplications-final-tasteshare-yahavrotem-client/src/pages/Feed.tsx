@@ -1,5 +1,6 @@
 import React from "react";
-import { Box, Typography, CircularProgress } from "@mui/material";
+import { Box, Typography, CircularProgress, Button } from "@mui/material";
+import { LogOut } from "lucide-react";
 import Post from "../components/Post";
 import type { Post as PostType, User } from "../types/post";
 
@@ -54,17 +55,32 @@ const mockPosts: PostType[] = [
   }
 ];
 
-const Feed: React.FC = () => {
+interface FeedProps {
+  onLogout: () => void;
+}
+
+const Feed: React.FC<FeedProps> = ({ onLogout }) => {
   return (
     <Box sx={{ minHeight: "100vh", p: { xs: 2, md: 4 }, bgcolor: "background.default" }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, color: "grey.900", mb: 0.5 }}>
-          Recipe Feed
-        </Typography>
-        <Typography variant="body2" sx={{ color: "grey.500" }}>
-          Discover delicious recipes from the community
-        </Typography>
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 600, color: "grey.900", mb: 0.5 }}>
+            Recipe Feed
+          </Typography>
+          <Typography variant="body2" sx={{ color: "grey.500" }}>
+            Discover delicious recipes from the community
+          </Typography>
+        </Box>
+        <Button 
+          variant="outlined" 
+          color="inherit" 
+          onClick={onLogout}
+          startIcon={<LogOut size={18} />}
+          sx={{ borderColor: "grey.300", color: "grey.700", textTransform: "none", fontWeight: 600 }}
+        >
+          Logout
+        </Button>
       </Box>
 
       {/* Grid */}
