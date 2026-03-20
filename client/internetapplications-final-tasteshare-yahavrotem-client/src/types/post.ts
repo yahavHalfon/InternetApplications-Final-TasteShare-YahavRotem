@@ -1,0 +1,23 @@
+export interface User {
+  _id: string;
+  username: string;
+  profileImage?: string;
+}
+
+export interface Post {
+  _id: string;
+  userID: string;
+  content: string;
+  image?: string;
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+  title?: string;
+  cookTime?: string;
+  difficulty?: "Easy" | "Medium" | "Advanced";
+}
+
+export interface PostProps {
+  post: Post;
+  user: User;
+}
