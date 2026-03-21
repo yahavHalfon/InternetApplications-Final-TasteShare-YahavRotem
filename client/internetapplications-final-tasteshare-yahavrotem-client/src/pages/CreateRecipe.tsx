@@ -1,7 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ImagePlus, Plus, Trash2, X } from "lucide-react";
-import { Alert, CircularProgress } from "@mui/material";
 import { recipeService } from "../services/recipeService";
 import "./CreateRecipe.css";
 
@@ -29,6 +28,11 @@ const formatCookDuration = (hours: number, minutes: number): string => {
   return segments.join(" ");
 };
 
+const addListItem = (items: string[]): string[] => [...items, ""];
+const removeListItem = (items: string[], index: number): string[] => items.filter((_, i) => i !== index);
+const updateListItem = (items: string[], index: number, value: string): string[] =>
+  items.map((current, i) => (i === index ? value : current));
+
 function CreateRecipe({ token }: CreateRecipeProps) {
   const navigate = useNavigate();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -46,6 +50,14 @@ function CreateRecipe({ token }: CreateRecipeProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) {
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
+    };
+  }, [imagePreviewUrl]);
+
   const canSubmit = useMemo(() => {
     const hasCookDuration = Number(cookHours) > 0 || Number(cookMinutes) > 0;
 
@@ -61,28 +73,34 @@ function CreateRecipe({ token }: CreateRecipeProps) {
     );
   }, [cookHours, cookMinutes, description, imageFile, ingredients, instructions, isSubmitting, servings, title]);
 
+  const resetImageInput = () => {
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  };
+
   const updateIngredient = (index: number, value: string) => {
-    setIngredients((prev) => prev.map((current, i) => (i === index ? value : current)));
+    setIngredients((prev) => updateListItem(prev, index, value));
   };
 
   const updateInstruction = (index: number, value: string) => {
-    setInstructions((prev) => prev.map((current, i) => (i === index ? value : current)));
+    setInstructions((prev) => updateListItem(prev, index, value));
   };
 
   const addIngredient = () => {
-    setIngredients((prev) => [...prev, ""]);
+    setIngredients((prev) => addListItem(prev));
   };
 
   const removeIngredient = (index: number) => {
-    setIngredients((prev) => prev.filter((_, i) => i !== index));
+    setIngredients((prev) => removeListItem(prev, index));
   };
 
   const addInstruction = () => {
-    setInstructions((prev) => [...prev, ""]);
+    setInstructions((prev) => addListItem(prev));
   };
 
   const removeInstruction = (index: number) => {
-    setInstructions((prev) => prev.filter((_, i) => i !== index));
+    setInstructions((prev) => removeListItem(prev, index));
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,17 +113,13 @@ function CreateRecipe({ token }: CreateRecipeProps) {
 
     if (!allowedImageTypes.has(file.type)) {
       setError("Only JPG, PNG, GIF or WebP images are allowed.");
-      if (imageInputRef.current) {
-        imageInputRef.current.value = "";
-      }
+      resetImageInput();
       return;
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
       setError("Image is too large. Max size is 5 MB.");
-      if (imageInputRef.current) {
-        imageInputRef.current.value = "";
-      }
+      resetImageInput();
       return;
     }
 
@@ -123,9 +137,7 @@ function CreateRecipe({ token }: CreateRecipeProps) {
     }
     setImageFile(null);
     setImagePreviewUrl("");
-    if (imageInputRef.current) {
-      imageInputRef.current.value = "";
-    }
+    resetImageInput();
   };
 
   const handleSubmit = async () => {
@@ -176,7 +188,7 @@ function CreateRecipe({ token }: CreateRecipeProps) {
           >
             {isSubmitting ? (
               <>
-                <CircularProgress size={14} thickness={5} color="inherit" />
+                <span className="create-recipe-spinner" aria-hidden="true" />
                 Publishing...
               </>
             ) : "Publish Recipe"}
@@ -343,9 +355,9 @@ function CreateRecipe({ token }: CreateRecipeProps) {
             </div>
 
             {error ? (
-              <Alert severity="error" sx={{ mb: 1.5, fontSize: "13px", py: 0.5 }}>
+              <p className="create-recipe-error" role="alert">
                 {error}
-              </Alert>
+              </p>
             ) : null}
 
             <button
@@ -356,7 +368,7 @@ function CreateRecipe({ token }: CreateRecipeProps) {
             >
               {isSubmitting ? (
                 <>
-                  <CircularProgress size={14} thickness={5} color="inherit" />
+                  <span className="create-recipe-spinner" aria-hidden="true" />
                   Publishing...
                 </>
               ) : "Publish Recipe"}
