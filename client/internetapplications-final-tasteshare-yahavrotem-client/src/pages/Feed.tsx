@@ -106,12 +106,6 @@ const Feed: React.FC<FeedProps> = ({ onLogout }) => {
         ))}
       </Box>
 
-      {/* Pagination Placeholder */}
-      {!isLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 6, pb: 4 }}>
-          <CircularProgress size={30} thickness={4} sx={{ color: "grey.300" }} />
-        </Box>
-      ) : null}
     </Box>
   );
 };
