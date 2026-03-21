@@ -1,6 +1,8 @@
 import express from "express";
 const router = express.Router();
 import userController from "../controllers/userController";
+import authenticate from "../middleware/authMiddleware";
+import { uploadProfileImage } from "../middleware/upload";
 
 /**
  * @swagger
@@ -26,6 +28,17 @@ import userController from "../controllers/userController";
  *                 $ref: '#/components/schemas/User'
  */
 router.get("/", userController.get.bind(userController));
+
+router.get("/profile", authenticate, userController.getProfile.bind(userController));
+
+router.put("/profile", authenticate, userController.updateProfile.bind(userController));
+
+router.put(
+	"/profile/picture",
+	authenticate,
+	uploadProfileImage.single("profileImage"),
+	userController.updateProfilePicture.bind(userController)
+);
 
 /**
  * @swagger
