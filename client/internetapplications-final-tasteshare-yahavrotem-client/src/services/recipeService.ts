@@ -16,8 +16,21 @@ export type ApiRecipe = {
   updatedAt: string;
 };
 
-const getRecipes = async (): Promise<ApiRecipe[]> => {
-  const response = await fetch(`${API_BASE_URL}/recipes`);
+export type PaginatedRecipesResponse = {
+  data: ApiRecipe[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+};
+
+const getRecipes = async (page: number, limit: number): Promise<PaginatedRecipesResponse> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/recipes?${params.toString()}`);
 
   if (!response.ok) {
     const fallbackMessage = "Failed to load recipes.";
@@ -25,7 +38,7 @@ const getRecipes = async (): Promise<ApiRecipe[]> => {
     throw new Error(data?.error || fallbackMessage);
   }
 
-  return (await response.json()) as ApiRecipe[];
+  return (await response.json()) as PaginatedRecipesResponse;
 };
 
 export const recipeService = {

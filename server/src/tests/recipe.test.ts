@@ -89,7 +89,12 @@ describe("Recipe Tests", () => {
     test("Get All Recipes", async () => {
         const response = await request(app).get("/recipes");
         expect(response.statusCode).toBe(200);
-        expect(response.body.length).toBeGreaterThan(0);
+        expect(Array.isArray(response.body.data)).toBe(true);
+        expect(response.body.data.length).toBeGreaterThan(0);
+        expect(typeof response.body.page).toBe("number");
+        expect(typeof response.body.limit).toBe("number");
+        expect(typeof response.body.total).toBe("number");
+        expect(typeof response.body.hasMore).toBe("boolean");
     });
 
     test("Get Recipe By ID - Success", async () => {

@@ -1,65 +1,98 @@
-import React, { useEffect, useState } from "react";
-import { Box, Typography, CircularProgress, Button } from "@mui/material";
-import { LogOut } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Box, Typography, CircularProgress } from "@mui/material";
 import RecipeCard from "../components/RecipeCard";
 import type { RecipeFeedItem, User } from "../types/recipe";
 import { recipeService } from "../services/recipeService";
 
-interface FeedProps {
-  onLogout: () => void;
-}
+const PAGE_SIZE = 9;
 
-const Feed: React.FC<FeedProps> = ({ onLogout }) => {
+const Feed: React.FC = () => {
   const [recipes, setRecipes] = useState<RecipeFeedItem[]>([]);
   const [usersById, setUsersById] = useState<Record<string, User>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pageRef = useRef(1);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const loadRecipes = useCallback(async (page: number, append: boolean) => {
+    try {
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+
+      const response = await recipeService.getRecipes(page, PAGE_SIZE);
+      const incomingRecipes = response.data;
+
+      const mappedRecipes: RecipeFeedItem[] = incomingRecipes.map((recipe) => ({
+        _id: recipe._id,
+        userID: recipe.userId,
+        title: recipe.title,
+        content: recipe.description,
+        image: recipe.image,
+        createdAt: new Date(recipe.createdAt).toLocaleDateString(),
+        likesCount: recipe.likedBy?.length ?? 0,
+        commentsCount: 0,
+        cookTime: recipe.cookTime,
+        difficulty: recipe.difficulty,
+      }));
+
+      const mappedUsers = incomingRecipes.reduce<Record<string, User>>((acc, recipe) => {
+        acc[recipe.userId] = {
+          _id: recipe.userId,
+          username: "TasteShare Chef",
+        };
+        return acc;
+      }, {});
+
+      setRecipes((prev) => (append ? [...prev, ...mappedRecipes] : mappedRecipes));
+      setUsersById((prev) => ({ ...prev, ...mappedUsers }));
+      setHasMore(response.hasMore);
+      pageRef.current = page;
+    } catch (loadError) {
+      const message = loadError instanceof Error ? loadError.message : "Failed to load recipes.";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadRecipes = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const recipes = await recipeService.getRecipes();
+    void loadRecipes(1, false);
+  }, [loadRecipes]);
 
-        const mappedRecipes: RecipeFeedItem[] = recipes.map((recipe) => ({
-          _id: recipe._id,
-          userID: recipe.userId,
-          title: recipe.title,
-          content: recipe.description,
-          image: recipe.image,
-          createdAt: new Date(recipe.createdAt).toLocaleDateString(),
-          likesCount: recipe.likedBy?.length ?? 0,
-          commentsCount: 0,
-          cookTime: recipe.cookTime,
-          difficulty: recipe.difficulty,
-        }));
+  useEffect(() => {
+    if (!loadMoreRef.current) {
+      return;
+    }
 
-        const mappedUsers = recipes.reduce<Record<string, User>>((acc, recipe) => {
-          acc[recipe.userId] = {
-            _id: recipe.userId,
-            username: "TasteShare Chef",
-          };
-          return acc;
-        }, {});
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (!first.isIntersecting || isLoading || isLoadingMore || !hasMore) {
+          return;
+        }
+        void loadRecipes(pageRef.current + 1, true);
+      },
+      { threshold: 0.2 },
+    );
 
-        setRecipes(mappedRecipes);
-        setUsersById(mappedUsers);
-      } catch (loadError) {
-        const message = loadError instanceof Error ? loadError.message : "Failed to load recipes.";
-        setError(message);
-      } finally {
-        setIsLoading(false);
-      }
+    observer.observe(loadMoreRef.current);
+
+    return () => {
+      observer.disconnect();
     };
-
-    void loadRecipes();
-  }, []);
+  }, [hasMore, isLoading, isLoadingMore, loadRecipes]);
 
   return (
     <Box sx={{ minHeight: "100vh", p: { xs: 2, md: 4 }, bgcolor: "background.default" }}>
       {/* Header */}
-      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <Box sx={{ mb: 4 }}>
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 600, color: "grey.900", mb: 0.5 }}>
             Recipe Feed
@@ -68,15 +101,6 @@ const Feed: React.FC<FeedProps> = ({ onLogout }) => {
             Discover delicious recipes from the community
           </Typography>
         </Box>
-        <Button 
-          variant="outlined" 
-          color="inherit" 
-          onClick={onLogout}
-          startIcon={<LogOut size={18} />}
-          sx={{ borderColor: "grey.300", color: "grey.700", textTransform: "none", fontWeight: 600 }}
-        >
-          Logout
-        </Button>
       </Box>
 
       {isLoading ? (
@@ -105,6 +129,14 @@ const Feed: React.FC<FeedProps> = ({ onLogout }) => {
           />
         ))}
       </Box>
+
+      {isLoadingMore ? (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 3, mb: 2 }}>
+          <CircularProgress size={24} thickness={4} />
+        </Box>
+      ) : null}
+
+      <Box ref={loadMoreRef} sx={{ height: 1 }} />
 
     </Box>
   );
