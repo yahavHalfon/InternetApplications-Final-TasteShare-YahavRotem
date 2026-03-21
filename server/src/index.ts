@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 import multer from "multer";
+import cors from "cors";
 dotenv.config({ path: ".env.dev" });
 import authRoute from "./routes/authRoutes";
 import { swaggerUi, swaggerSpec } from "./swagger";
@@ -26,12 +27,12 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'Recipes & Comments API Documentation'
 }));
 
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  res.setHeader("Access-Control-Allow-Methods", "*");
-  next();
-});
+app.use(cors({
+  origin: "*",
+  allowedHeaders: "*",
+  methods: "*",
+  maxAge: 86400,
+}));
 
 app.use("/auth", authRoute);
 app.use("/recipes", recipeRoutes);

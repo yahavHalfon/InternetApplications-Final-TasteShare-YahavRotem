@@ -182,6 +182,19 @@ const buildSeedRecipes = (userIds: string[]) => {
       ? String(new Types.ObjectId())
       : userIds[index % userIds.length];
 
+    // Randomly add 0-5 likes to each recipe
+    const likeCount = Math.floor(Math.random() * 6);
+    const likedBy: string[] = [];
+    const availableUserIds = userIds.filter((id) => id !== userId);
+
+    for (let i = 0; i < likeCount && availableUserIds.length > 0; i++) {
+      const randomIdx = Math.floor(Math.random() * availableUserIds.length);
+      const likerUserId = availableUserIds[randomIdx];
+      if (!likedBy.includes(likerUserId)) {
+        likedBy.push(likerUserId);
+      }
+    }
+
     return {
       userId,
       image: template.image,
@@ -192,7 +205,7 @@ const buildSeedRecipes = (userIds: string[]) => {
       cookTime: template.cookTime,
       servings: template.servings,
       difficulty: template.difficulty,
-      likedBy: [],
+      likedBy,
     };
   });
 };

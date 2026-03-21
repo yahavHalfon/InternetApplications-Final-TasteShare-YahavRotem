@@ -318,13 +318,14 @@ function App() {
           ) : null}
 
           <Routes>
+            <Route path="/" element={<Navigate to="/feed" replace />} />
             {authRoutes.map((route) => (
               <Route
                 key={route.path}
                 path={route.path}
                 element={
                   route.path === "/feed" ? (
-                    <Feed />
+                    <Feed token={session.token} userId={session.user.id} />
                   ) : route.path === "/create" ? (
                     <CreateRecipe token={session.token} />
                   ) : route.path === "/profile" ? (

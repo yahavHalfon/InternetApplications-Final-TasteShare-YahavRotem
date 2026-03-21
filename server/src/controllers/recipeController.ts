@@ -1,5 +1,6 @@
 import Recipe from "../model/recipeModel";
 import type { IRecipe } from "../model/recipeModel";
+import { Types } from "mongoose";
 import BaseController from "./baseController";
 
 import CommentModel from "../model/commentModel";
@@ -160,6 +161,36 @@ class RecipeController extends BaseController<IRecipe> {
 
             await CommentModel.deleteMany({ recipeId: id });
             return super.delete(req, res);
+        } catch (error) {
+            return this.handleError(res, error);
+        }
+    }
+
+    async toggleLike(req: AuthRequest, res: Response) {
+        const id = req.params.id;
+        const userId = req.user?._id;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        try {
+            const recipe = await Recipe.findById(id);
+            if (!recipe) {
+                return res.status(404).json({ error: "Recipe not found" });
+            }
+
+            const userObjectId = new Types.ObjectId(userId);
+            const isLiked = recipe.likedBy.some((id) => id.toString() === userId);
+
+            if (isLiked) {
+                recipe.likedBy = recipe.likedBy.filter((id) => id.toString() !== userId);
+            } else {
+                recipe.likedBy.push(userObjectId);
+            }
+
+            await recipe.save();
+            return res.status(200).json(recipe);
         } catch (error) {
             return this.handleError(res, error);
         }

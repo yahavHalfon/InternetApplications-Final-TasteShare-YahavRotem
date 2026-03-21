@@ -21,7 +21,12 @@ const toApiAssetUrl = (assetPath?: string): string | undefined => {
   return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
 };
 
-const Feed: React.FC = () => {
+interface FeedProps {
+  token?: string;
+  userId?: string;
+}
+
+const Feed: React.FC<FeedProps> = ({ token, userId }) => {
   const [recipes, setRecipes] = useState<RecipeFeedItem[]>([]);
   const [usersById, setUsersById] = useState<Record<string, FeedUserView>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -94,6 +99,7 @@ const Feed: React.FC = () => {
         image: toApiAssetUrl(recipe.image),
         createdAt: dayjs(recipe.createdAt).format("DD/MM/YYYY"),
         likesCount: recipe.likedBy?.length ?? 0,
+        likedBy: recipe.likedBy ?? [],
         commentsCount: 0,
         cookTime: recipe.cookTime,
         difficulty: recipe.difficulty,
@@ -176,6 +182,13 @@ const Feed: React.FC = () => {
             key={recipe._id}
             recipe={recipe}
             user={getRecipeUser(recipe.userID)}
+            token={token}
+            userId={userId}
+            onLikeChange={(recipeId, likedBy) => {
+              setRecipes((prev) =>
+                prev.map((r) => (r._id === recipeId ? { ...r, likedBy } : r))
+              );
+            }}
           />
         ))}
       </Box>

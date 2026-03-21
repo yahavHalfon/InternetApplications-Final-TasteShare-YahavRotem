@@ -1,9 +1,47 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box, Typography, Avatar, Paper } from "@mui/material";
 import { Clock3, Heart, MessageCircle } from "lucide-react";
 import type { RecipeCardProps } from "../types/recipe";
+import { recipeService } from "../services/recipeService";
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, user }) => {
+interface RecipeCardWithActionsProps extends RecipeCardProps {
+  userId?: string;
+  token?: string;
+  onLikeChange?: (recipeId: string, likedBy: string[]) => void;
+}
+
+const RecipeCard: React.FC<RecipeCardWithActionsProps> = ({
+  recipe,
+  user,
+  userId,
+  token,
+  onLikeChange,
+}) => {
+  const [isLiking, setIsLiking] = useState(false);
+  const [likedBy, setLikedBy] = useState(recipe.likedBy);
+
+  const isLikedByUser = userId ? likedBy.includes(userId) : false;
+  const likesCount = likedBy.length;
+
+  const handleLikeClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!userId || !token || isLiking) {
+      return;
+    }
+
+    setIsLiking(true);
+    try {
+      const updatedRecipe = await recipeService.toggleLike(recipe._id, token);
+      const newLikedBy = updatedRecipe.likedBy || [];
+      setLikedBy(newLikedBy);
+      onLikeChange?.(recipe._id, newLikedBy);
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
   return (
     <Paper
       variant="outlined"
@@ -155,10 +193,29 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, user }) => {
             borderColor: "grey.100",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", "&:hover .icon": { color: "error.light" } }}>
-            <Heart className="icon" size={17} style={{ color: "#9ca3af", transition: "color 0.2s" }} />
+          <Box
+            onClick={handleLikeClick}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              cursor: userId && token ? "pointer" : "default",
+              opacity: isLiking ? 0.6 : 1,
+              transition: "opacity 0.2s",
+              "&:hover .icon": userId && token ? { color: "error.light" } : {},
+            }}
+          >
+            <Heart
+              className="icon"
+              size={17}
+              fill={isLikedByUser ? "#ef4444" : "none"}
+              style={{
+                color: isLikedByUser ? "#ef4444" : "#9ca3af",
+                transition: "all 0.2s",
+              }}
+            />
             <Typography sx={{ fontSize: 12, color: "grey.400" }}>
-              {recipe.likesCount}
+              {likesCount}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", "&:hover .icon": { color: "warning.light" } }}>

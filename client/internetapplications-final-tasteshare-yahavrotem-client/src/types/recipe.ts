@@ -11,6 +11,7 @@ export interface RecipeFeedItem {
   image?: string;
   createdAt: string;
   likesCount: number;
+  likedBy: string[];
   commentsCount: number;
   title?: string;
   cookTime?: string;
