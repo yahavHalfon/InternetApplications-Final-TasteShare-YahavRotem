@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../config/env";
 
-type AuthUser = {
+export type AuthUser = {
   id: string;
   email: string;
   name: string;

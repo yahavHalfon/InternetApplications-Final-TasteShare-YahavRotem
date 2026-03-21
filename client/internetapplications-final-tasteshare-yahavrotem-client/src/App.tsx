@@ -20,6 +20,7 @@ import { GOOGLE_CLIENT_ID } from "./config/env";
 import { authService, type AuthSession } from "./services/authService";
 import Feed from "./pages/Feed";
 import CreateRecipe from "./pages/CreateRecipe";
+import Profile from "./pages/Profile";
 import Navbar from "./components/Navbar";
 import "./App.css";
 
@@ -326,6 +327,22 @@ function App() {
                     <Feed />
                   ) : route.path === "/create" ? (
                     <CreateRecipe token={session.token} />
+                  ) : route.path === "/profile" ? (
+                    <Profile
+                      token={session.token}
+                      initialUser={session.user}
+                      onProfileUpdated={(updatedUser) => {
+                        setSession((prevSession) => {
+                          if (!prevSession) {
+                            return prevSession;
+                          }
+                          return {
+                            ...prevSession,
+                            user: updatedUser,
+                          };
+                        });
+                      }}
+                    />
                   ) : (
                     <section className="app-view-card">
                       <h1>{route.title}</h1>
