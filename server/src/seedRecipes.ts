@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 import { Types } from "mongoose";
 import dotenv from "dotenv";
 import User from "./model/userModel";
@@ -22,8 +23,76 @@ type SeedRecipe = {
   difficulty: RecipeDifficulty;
 };
 
+type SeedUser = {
+  email: string;
+  name: string;
+  username: string;
+  bio: string;
+  location: string;
+};
+
 const TOTAL_RECIPES = 100;
-const UNKNOWN_USER_RECIPES = 40;
+const UNKNOWN_USER_RECIPES = 20;
+const SEED_PASSWORD = "Password123!";
+
+const seedUsers: SeedUser[] = [
+  {
+    email: "yahav.seed@tasteshare.local",
+    name: "Yahav Chef",
+    username: "yahavchef",
+    bio: "Home cook and pasta lover.",
+    location: "Tel Aviv",
+  },
+  {
+    email: "rotem.seed@tasteshare.local",
+    name: "Rotem Baker",
+    username: "rotembakes",
+    bio: "Bread, cakes, and weekend desserts.",
+    location: "Haifa",
+  },
+  {
+    email: "dana.seed@tasteshare.local",
+    name: "Dana Green",
+    username: "danagreen",
+    bio: "Fresh salads and veggie bowls.",
+    location: "Jerusalem",
+  },
+  {
+    email: "lior.seed@tasteshare.local",
+    name: "Lior Grill",
+    username: "liorgrill",
+    bio: "Open-flame cooking fan.",
+    location: "Beer Sheva",
+  },
+  {
+    email: "maya.seed@tasteshare.local",
+    name: "Maya Spice",
+    username: "mayaspice",
+    bio: "Bold spices and one-pot dinners.",
+    location: "Raanana",
+  },
+  {
+    email: "noam.seed@tasteshare.local",
+    name: "Noam Quick",
+    username: "noamquick",
+    bio: "Fast weekday meals.",
+    location: "Netanya",
+  },
+  {
+    email: "gal.seed@tasteshare.local",
+    name: "Gal Comfort",
+    username: "galcomfort",
+    bio: "Comfort food all year.",
+    location: "Herzliya",
+  },
+  {
+    email: "adi.seed@tasteshare.local",
+    name: "Adi Fresh",
+    username: "adifresh",
+    bio: "Seasonal ingredients only.",
+    location: "Eilat",
+  },
+];
 
 const recipeTemplates: SeedRecipe[] = [
   {
@@ -104,14 +173,17 @@ const recipeTemplates: SeedRecipe[] = [
   },
 ];
 
-const buildSeedRecipes = (knownUserId: Types.ObjectId) => {
+const buildSeedRecipes = (userIds: string[]) => {
   return Array.from({ length: TOTAL_RECIPES }, (_, index) => {
     const template = recipeTemplates[index % recipeTemplates.length];
     const recipeNumber = String(index + 1).padStart(3, "0");
-    const usesUnknownUser = index >= TOTAL_RECIPES - UNKNOWN_USER_RECIPES;
+    const shouldUseUnknownUser = index >= TOTAL_RECIPES - UNKNOWN_USER_RECIPES;
+    const userId = shouldUseUnknownUser
+      ? String(new Types.ObjectId())
+      : userIds[index % userIds.length];
 
     return {
-      userId: usesUnknownUser ? new Types.ObjectId() : knownUserId,
+      userId,
       image: template.image,
       title: `Seed Recipe #${recipeNumber} - ${template.title}`,
       description: template.description,
@@ -130,23 +202,51 @@ async function seedRecipes() {
     console.log("Connecting to Mongo:", MONGODB_URI);
     await mongoose.connect(MONGODB_URI!, {});
 
-    const preferredEmail = process.env.SEED_USER_EMAIL;
-    const seedUser = preferredEmail
-      ? await User.findOne({ email: preferredEmail.toLowerCase() })
-      : await User.findOne().sort({ updatedAt: -1 });
+    const hashedPassword = await bcrypt.hash(SEED_PASSWORD, 10);
 
-    if (!seedUser) {
-      throw new Error("No user found. Run npm run seed first to create a seed user.");
+    await User.bulkWrite(
+      seedUsers.map((user) => ({
+        updateOne: {
+          filter: { email: user.email },
+          update: {
+            $set: {
+              name: user.name,
+              username: user.username,
+              bio: user.bio,
+              location: user.location,
+              avatarUrl: "",
+              website: "",
+            },
+            $setOnInsert: {
+              email: user.email,
+              password: hashedPassword,
+            },
+          },
+          upsert: true,
+        },
+      }))
+    );
+
+    const createdUsers = await User.find({ email: { $in: seedUsers.map((user) => user.email) } })
+      .select("_id email name username")
+      .lean();
+
+    if (createdUsers.length === 0) {
+      throw new Error("Failed to seed users for recipes.");
     }
 
-    const recipesToInsert = buildSeedRecipes(seedUser._id);
+    const recipesToInsert = buildSeedRecipes(createdUsers.map((user) => String(user._id)));
 
     await Recipe.deleteMany({ title: /^Seed Recipe #\d{3} - / });
     await Recipe.insertMany(recipesToInsert);
 
+    console.log(`Seeded ${createdUsers.length} users.`);
+    createdUsers.forEach((user) => {
+      console.log(`- ${user.email} (${user.name} / ${user.username})`);
+    });
     console.log(`Seeded ${TOTAL_RECIPES} recipes.`);
-    console.log(`Known user recipes: ${TOTAL_RECIPES - UNKNOWN_USER_RECIPES} (user ${seedUser.email}).`);
-    console.log(`Unknown user recipes: ${UNKNOWN_USER_RECIPES} (random ObjectIds).`);
+    console.log(`Recipes mapped to seeded users: ${TOTAL_RECIPES - UNKNOWN_USER_RECIPES}.`);
+    console.log(`Recipes with random user IDs (Unknown fallback): ${UNKNOWN_USER_RECIPES}.`);
     process.exit(0);
   } catch (error) {
     console.error("Recipe seed failed:", error);
