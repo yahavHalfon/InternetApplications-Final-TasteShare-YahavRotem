@@ -1,8 +1,6 @@
 import React from "react";
 import { Box, Typography, Avatar, Paper } from "@mui/material";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import { Clock3, Heart, MessageCircle } from "lucide-react";
 import type { RecipeCardProps } from "../types/recipe";
 
 const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, user }) => {
@@ -70,7 +68,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, user }) => {
                   color: "grey.600",
                 }}
               >
-                <AccessTimeIcon sx={{ fontSize: 11 }} />
+                <Clock3 size={11} />
                 <Typography sx={{ fontSize: 11, fontWeight: 500 }}>
                   {recipe.cookTime}
                 </Typography>
@@ -158,13 +156,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, user }) => {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", "&:hover .icon": { color: "error.light" } }}>
-            <FavoriteBorderIcon className="icon" sx={{ fontSize: 17, color: "grey.400", transition: "color 0.2s" }} />
+            <Heart className="icon" size={17} style={{ color: "#9ca3af", transition: "color 0.2s" }} />
             <Typography sx={{ fontSize: 12, color: "grey.400" }}>
               {recipe.likesCount}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", "&:hover .icon": { color: "warning.light" } }}>
-            <ChatBubbleOutlineIcon className="icon" sx={{ fontSize: 17, color: "grey.400", transition: "color 0.2s" }} />
+            <MessageCircle className="icon" size={17} style={{ color: "#9ca3af", transition: "color 0.2s" }} />
             <Typography sx={{ fontSize: 12, color: "grey.400" }}>
               {recipe.commentsCount}
             </Typography>
