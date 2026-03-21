@@ -197,7 +197,7 @@ const buildSeedRecipes = (userIds: string[]) => {
   });
 };
 
-async function seedRecipes() {
+async function seedDatabase() {
   try {
     console.log("Connecting to Mongo:", MONGODB_URI);
     await mongoose.connect(MONGODB_URI!, {});
@@ -254,4 +254,4 @@ async function seedRecipes() {
   }
 }
 
-void seedRecipes();
+void seedDatabase();
