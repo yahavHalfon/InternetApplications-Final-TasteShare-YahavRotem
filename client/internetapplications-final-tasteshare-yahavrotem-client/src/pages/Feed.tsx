@@ -160,7 +160,6 @@ const Feed: React.FC = () => {
         <Typography sx={{ color: "error.main", mb: 2 }}>{error}</Typography>
       ) : null}
 
-      {/* Grid */}
       <Box
         sx={{
           display: "grid",
