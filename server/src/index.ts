@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import multer from "multer";
 dotenv.config({ path: ".env.dev" });
 import authRoute from "./routes/authRoutes";
 import { swaggerUi, swaggerSpec } from "./swagger";
@@ -12,7 +13,7 @@ import commentRoutes from "./routes/commentRoutes";
 import userRoutes from "./routes/userRoutes";
 
 const app = express();
-const UPLOADS_DIR = path.resolve(__dirname, "../uploads");
+const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
 app.use(express.json());
 app.use(morgan("common"));
 
@@ -36,6 +37,21 @@ app.use("/auth", authRoute);
 app.use("/recipes", recipeRoutes);
 app.use("/comments", commentRoutes);
 app.use("/users", userRoutes);
+
+app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    const message = err.code === "LIMIT_FILE_SIZE"
+      ? "Image is too large. Max size is 5 MB."
+      : err.message;
+    return res.status(400).json({ error: message });
+  }
+
+  if (err instanceof Error && err.message.toLowerCase().includes("only image files")) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  return next(err);
+});
 
 const initApp = () => {
   const promise = new Promise<Express>((resolve, reject) => {

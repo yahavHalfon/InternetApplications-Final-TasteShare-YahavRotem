@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { Navigate, Route, Routes } from "react-router-dom";
+import slugify from "slugify";
 import {
   ArrowLeft,
   ArrowRight,
@@ -18,6 +19,7 @@ import {
 import { GOOGLE_CLIENT_ID } from "./config/env";
 import { authService, type AuthSession } from "./services/authService";
 import Feed from "./pages/Feed";
+import CreateRecipe from "./pages/CreateRecipe";
 import Navbar from "./components/Navbar";
 import "./App.css";
 
@@ -29,18 +31,15 @@ type Notification = {
   message: string;
 } | null;
 
+type RegisterCredentials = {
+  email: string;
+  password: string;
+};
+
 const ACCESS_TOKEN_STORAGE_KEY = "accessToken";
 const REFRESH_TOKEN_STORAGE_KEY = "refreshToken";
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const normalizeUsername = (value: string): string => {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/[^a-z0-9._]/g, "")
-    .slice(0, 30);
-};
+const normalizeUsername = (value: string): string =>
+  slugify(value, { lower: true, strict: true, trim: true, replacement: "" }).slice(0, 30);
 
 const authRoutes = [
   {
@@ -55,7 +54,7 @@ const authRoutes = [
   },
   {
     path: "/create",
-    title: "Add Post",
+    title: "Add Recipe",
     description: "Share your next recipe with the TasteShare community.",
   },
   {
@@ -74,14 +73,8 @@ function App() {
   const [notification, setNotification] = useState<Notification>(null);
   const [session, setSession] = useState<AuthSession | null>(null);
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
+  const [registerCredentials, setRegisterCredentials] = useState<RegisterCredentials | null>(null);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [bio, setBio] = useState("");
-  const [location, setLocation] = useState("");
-  const [website, setWebsite] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
 
@@ -162,28 +155,17 @@ function App() {
     void restoreSession();
   }, [clearSession, validateAndRefreshToken]);
 
-  const validateCredentials = (): boolean => {
-    if (!emailPattern.test(email.trim().toLowerCase())) {
-      notify("error", "Please enter a valid email address.");
-      return false;
-    }
-    if (password.length < 8) {
-      notify("error", "Password must be at least 8 characters.");
-      return false;
-    }
-    return true;
-  };
-
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!validateCredentials()) {
-      return;
-    }
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+    const password = String(formData.get("password") ?? "");
 
     setIsSubmitting(true);
     try {
       const authSession = await authService.login({
-        email: email.trim().toLowerCase(),
+        email,
         password,
       });
       saveSession(authSession);
@@ -197,37 +179,46 @@ function App() {
 
   const handleNextRegisterStep = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!validateCredentials()) {
-      return;
-    }
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+    const password = String(formData.get("password") ?? "");
+
+    setRegisterCredentials({ email, password });
     setRegisterStep(2);
   };
 
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!validateCredentials()) {
+
+    if (!registerCredentials) {
+      notify("error", "Please complete account details first.");
+      setRegisterStep(1);
       return;
     }
-    if (!name.trim()) {
-      notify("error", "Please provide your full name.");
-      return;
-    }
+
+    const formData = new FormData(event.currentTarget);
+    const name = String(formData.get("name") ?? "").trim();
+    const username = String(formData.get("username") ?? "").trim();
+    const bio = String(formData.get("bio") ?? "").trim();
+    const location = String(formData.get("location") ?? "").trim();
+    const website = String(formData.get("website") ?? "").trim();
 
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("email", email.trim().toLowerCase());
-      formData.append("password", password);
-      formData.append("name", name.trim());
-      formData.append("username", normalizeUsername(username || name));
-      formData.append("bio", bio.trim());
-      formData.append("location", location.trim());
-      formData.append("website", website.trim());
+      const registerFormData = new FormData();
+      registerFormData.append("email", registerCredentials.email);
+      registerFormData.append("password", registerCredentials.password);
+      registerFormData.append("name", name);
+      registerFormData.append("username", normalizeUsername(username || name));
+      registerFormData.append("bio", bio);
+      registerFormData.append("location", location);
+      registerFormData.append("website", website);
       if (avatarFile) {
-        formData.append("profileImage", avatarFile);
+        registerFormData.append("profileImage", avatarFile);
       }
 
-      const authSession = await authService.register(formData);
+      const authSession = await authService.register(registerFormData);
       saveSession(authSession);
       notify("success", "Your account has been created successfully.");
     } catch (error) {
@@ -333,6 +324,8 @@ function App() {
                 element={
                   route.path === "/feed" ? (
                     <Feed />
+                  ) : route.path === "/create" ? (
+                    <CreateRecipe token={session.token} />
                   ) : (
                     <section className="app-view-card">
                       <h1>{route.title}</h1>
@@ -378,22 +371,23 @@ function App() {
               <div className="input-with-icon">
                 <Mail size={17} className="input-icon" />
                 <input
+                  name="email"
                   type="email"
                   placeholder="Email address"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
                   className="auth-input"
+                  required
                 />
               </div>
 
               <div className="input-with-icon">
                 <Lock size={17} className="input-icon" />
                 <input
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
                   className="auth-input auth-input-password"
+                  required
+                  minLength={8}
                 />
                 <button
                   type="button"
@@ -425,6 +419,7 @@ function App() {
                 onClick={() => {
                   setAuthMode("register");
                   setRegisterStep(1);
+                  setRegisterCredentials(null);
                 }}
               >
                 Sign Up
@@ -449,10 +444,9 @@ function App() {
               <div className="input-with-icon">
                 <Mail size={17} className="input-icon" />
                 <input
+                  name="email"
                   type="email"
                   placeholder="Email address"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
                   className="auth-input"
                   required
                 />
@@ -461,12 +455,12 @@ function App() {
               <div className="input-with-icon">
                 <Lock size={17} className="input-icon" />
                 <input
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Create a password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
                   className="auth-input auth-input-password"
                   required
+                  minLength={8}
                 />
                 <button
                   type="button"
@@ -499,6 +493,7 @@ function App() {
                 onClick={() => {
                   setAuthMode("login");
                   setRegisterStep(1);
+                  setRegisterCredentials(null);
                 }}
               >
                 Sign In
@@ -533,6 +528,7 @@ function App() {
                 </label>
                 <input
                   id="profileImage"
+                  name="profileImage"
                   type="file"
                   accept="image/*"
                   onChange={handleAvatarChange}
@@ -546,15 +542,9 @@ function App() {
                 <div className="input-with-icon">
                   <User size={17} className="input-icon" />
                   <input
+                    name="name"
                     type="text"
                     placeholder="Your full name"
-                    value={name}
-                    onChange={(event) => {
-                      setName(event.target.value);
-                      if (!username) {
-                        setUsername(normalizeUsername(event.target.value));
-                      }
-                    }}
                     className="auth-input"
                     required
                   />
@@ -566,11 +556,11 @@ function App() {
                 <div className="input-with-icon input-with-prefix">
                   <span className="prefix">@</span>
                   <input
+                    name="username"
                     type="text"
                     placeholder="yourname"
-                    value={username}
-                    onChange={(event) => setUsername(normalizeUsername(event.target.value))}
                     className="auth-input auth-input-username"
+                    pattern="[A-Za-z0-9._]*"
                   />
                 </div>
               </div>
@@ -579,13 +569,11 @@ function App() {
                 <label>Bio</label>
                 <div className="bio-wrap">
                   <textarea
+                    name="bio"
                     placeholder="Tell the community about yourself, your cooking style, your favorite cuisines..."
                     rows={3}
                     maxLength={200}
-                    value={bio}
-                    onChange={(event) => setBio(event.target.value)}
                   />
-                  <span>{bio.length}/200</span>
                 </div>
               </div>
 
@@ -595,10 +583,9 @@ function App() {
                   <div className="input-with-icon input-small-icon">
                     <MapPin size={15} className="input-icon" />
                     <input
+                      name="location"
                       type="text"
                       placeholder="City, Country"
-                      value={location}
-                      onChange={(event) => setLocation(event.target.value)}
                       className="auth-input"
                     />
                   </div>
@@ -608,11 +595,11 @@ function App() {
                   <div className="input-with-icon input-small-icon">
                     <Link2 size={15} className="input-icon" />
                     <input
+                      name="website"
                       type="text"
                       placeholder="yoursite.com"
-                      value={website}
-                      onChange={(event) => setWebsite(event.target.value)}
                       className="auth-input"
+                      pattern="https?://.*|[^\s]+\.[^\s]+"
                     />
                   </div>
                 </div>

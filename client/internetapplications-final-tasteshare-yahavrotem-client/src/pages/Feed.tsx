@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
+import dayjs from "dayjs";
 import RecipeCard from "../components/RecipeCard";
 import type { RecipeFeedItem } from "../types/recipe";
 import { API_BASE_URL } from "../config/env";
@@ -90,8 +91,8 @@ const Feed: React.FC = () => {
         userID: recipe.userId,
         title: recipe.title,
         content: recipe.description,
-        image: recipe.image,
-        createdAt: new Date(recipe.createdAt).toLocaleDateString(),
+        image: toApiAssetUrl(recipe.image),
+        createdAt: dayjs(recipe.createdAt).format("DD/MM/YYYY"),
         likesCount: recipe.likedBy?.length ?? 0,
         commentsCount: 0,
         cookTime: recipe.cookTime,
@@ -140,12 +141,15 @@ const Feed: React.FC = () => {
   }, [hasMore, isLoading, isLoadingMore, loadRecipes]);
 
   return (
-    <Box sx={{ minHeight: "100vh", p: { xs: 2, md: 4 }, bgcolor: "background.default" }}>
+    <Box sx={{ minHeight: "100vh", p: { xs: 2, md: 4 }, bgcolor: "#f8f8fa" }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, color: "grey.900", mb: 0.5 }}>
+        <Typography
+          variant="h5"
+          sx={{ fontWeight: 600, color: "grey.900", mb: 0.5, fontFamily: "inherit", fontSize: "24px" }}
+        >
           Recipe Feed
         </Typography>
-        <Typography variant="body2" sx={{ color: "grey.500" }}>
+        <Typography variant="body2" sx={{ color: "#9ca3af", fontFamily: "inherit", fontSize: "14px" }}>
           Discover delicious recipes from the community
         </Typography>
       </Box>

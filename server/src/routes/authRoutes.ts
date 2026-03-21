@@ -1,7 +1,7 @@
 import express from "express";
 import * as authController from "../controllers/authController";
 import authMiddleware from "../middleware/authMiddleware";
-import { upload } from "../middleware/upload";
+import { uploadProfileImage } from "../middleware/upload";
 
 const router = express.Router();
 
@@ -42,7 +42,7 @@ const router = express.Router();
  *       400:
  *         description: User already exists or invalid input
  */
-router.post("/register", upload.single("profileImage"), authController.register);
+router.post("/register", uploadProfileImage.single("profileImage"), authController.register);
 
 /**
  * @swagger

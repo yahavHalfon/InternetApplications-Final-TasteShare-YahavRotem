@@ -17,6 +17,17 @@ export type PaginatedRecipesResponse = {
   hasMore: boolean;
 };
 
+export type CreateRecipePayload = {
+  image: File;
+  title: string;
+  description: string;
+  ingredients: string[];
+  instructions: string[];
+  cookTime: string;
+  servings: number;
+  difficulty: "Easy" | "Medium" | "Advanced";
+};
+
 const getRecipes = async (page: number, limit: number): Promise<PaginatedRecipesResponse> => {
   const params = new URLSearchParams({
     page: String(page),
@@ -33,6 +44,35 @@ const getRecipes = async (page: number, limit: number): Promise<PaginatedRecipes
   return (await response.json()) as PaginatedRecipesResponse;
 };
 
+const createRecipe = async (payload: CreateRecipePayload, token: string): Promise<ApiRecipe> => {
+  const formData = new FormData();
+  formData.append("image", payload.image);
+  formData.append("title", payload.title.trim());
+  formData.append("description", payload.description.trim());
+  formData.append("ingredients", JSON.stringify(payload.ingredients));
+  formData.append("instructions", JSON.stringify(payload.instructions));
+  formData.append("cookTime", payload.cookTime.trim());
+  formData.append("servings", String(payload.servings));
+  formData.append("difficulty", payload.difficulty);
+
+  const response = await fetch(`${API_BASE_URL}/recipes`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const fallbackMessage = "Failed to create recipe.";
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(data?.error || fallbackMessage);
+  }
+
+  return (await response.json()) as ApiRecipe;
+};
+
 export const recipeService = {
   getRecipes,
+  createRecipe,
 };

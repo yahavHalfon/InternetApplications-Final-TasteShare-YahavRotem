@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import { randomUUID } from "crypto";
+import slugify from "slugify";
 
 const sendError = (status: number, message: string, res: Response) => {
     res.status(status).json({ error: message });
@@ -60,14 +61,8 @@ const generateToken = (userId: string): GeneratedTokens => {
     return { token, refreshToken };
 }
 
-const normalizeUsername = (name: string): string => {
-    return name
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "")
-        .replace(/[^a-z0-9._]/g, "")
-        .slice(0, 30);
-};
+const normalizeUsername = (name: string): string =>
+    slugify(name, { lower: true, strict: true, trim: true, replacement: "" }).slice(0, 30);
 
 const buildPublicUser = (user: InstanceType<typeof User>): PublicUser => {
     return {
@@ -97,7 +92,7 @@ export const register = async (req: Request, res: Response) => {
     const location = typeof req.body.location === "string" ? req.body.location.trim() : "";
     const website = typeof req.body.website === "string" ? req.body.website.trim() : "";
     const avatarUrl = req.file
-        ? `/uploads/${req.file.filename}`
+        ? `/uploads/profiles/${req.file.filename}`
         : typeof req.body.avatarUrl === "string"
             ? req.body.avatarUrl.trim()
             : "";

@@ -9,7 +9,7 @@ type NavbarProps = {
 const navItems = [
   { to: "/feed", label: "Feed", icon: Home },
   { to: "/search", label: "AI Search", icon: Sparkles },
-  { to: "/create", label: "Add Post", icon: PenSquare },
+  { to: "/create", label: "Add Recipe", icon: PenSquare },
   { to: "/profile", label: "Profile", icon: User },
 ] as const;
 
