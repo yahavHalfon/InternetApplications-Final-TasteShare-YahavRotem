@@ -199,4 +199,33 @@ router.put("/:id", authMiddleware, recipeController.put.bind(recipeController));
  */
 router.delete("/:id", authMiddleware, recipeController.delete.bind(recipeController));
 
+/**
+ * @swagger
+ * /recipes/{id}/like:
+ *   post:
+ *     summary: Toggle like on a recipe
+ *     tags: [Recipes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The recipe id
+ *     responses:
+ *       200:
+ *         description: The recipe with updated likes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Recipe'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: The recipe was not found
+ */
+router.post("/:id/like", authMiddleware, recipeController.toggleLike.bind(recipeController));
+
 export default router;
