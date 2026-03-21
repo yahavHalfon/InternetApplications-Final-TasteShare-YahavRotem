@@ -1,60 +1,59 @@
 import React, { useEffect, useState } from "react";
 import { Box, Typography, CircularProgress, Button } from "@mui/material";
 import { LogOut } from "lucide-react";
-import Post from "../components/Post";
-import type { Post as PostType, User } from "../types/post";
-import { postService } from "../services/postService";
+import RecipeCard from "../components/RecipeCard";
+import type { RecipeFeedItem, User } from "../types/recipe";
+import { recipeService } from "../services/recipeService";
 
 interface FeedProps {
   onLogout: () => void;
 }
 
 const Feed: React.FC<FeedProps> = ({ onLogout }) => {
-  const [posts, setPosts] = useState<PostType[]>([]);
+  const [recipes, setRecipes] = useState<RecipeFeedItem[]>([]);
   const [usersById, setUsersById] = useState<Record<string, User>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadPosts = async () => {
+    const loadRecipes = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const apiPosts = await postService.getPosts();
+        const recipes = await recipeService.getRecipes();
 
-        const mappedPosts: PostType[] = apiPosts.map((post) => ({
-          _id: post.id,
-          userID: post.id,
-          title: post.title,
-          content: post.content,
-          image: post.imageUrl,
-          createdAt: post.createdAtText ?? "",
-          likesCount: post.likesCount ?? 0,
-          commentsCount: post.commentsCount ?? 0,
-          cookTime: post.cookTime,
-          difficulty: post.difficulty,
+        const mappedRecipes: RecipeFeedItem[] = recipes.map((recipe) => ({
+          _id: recipe._id,
+          userID: recipe.userId,
+          title: recipe.title,
+          content: recipe.description,
+          image: recipe.image,
+          createdAt: new Date(recipe.createdAt).toLocaleDateString(),
+          likesCount: recipe.likedBy?.length ?? 0,
+          commentsCount: 0,
+          cookTime: recipe.cookTime,
+          difficulty: recipe.difficulty,
         }));
 
-        const mappedUsers = apiPosts.reduce<Record<string, User>>((acc, post) => {
-          acc[post.id] = {
-            _id: post.id,
-            username: post.username,
-            profileImage: post.userImageUrl,
+        const mappedUsers = recipes.reduce<Record<string, User>>((acc, recipe) => {
+          acc[recipe.userId] = {
+            _id: recipe.userId,
+            username: "TasteShare Chef",
           };
           return acc;
         }, {});
 
-        setPosts(mappedPosts);
+        setRecipes(mappedRecipes);
         setUsersById(mappedUsers);
       } catch (loadError) {
-        const message = loadError instanceof Error ? loadError.message : "Failed to load feed posts.";
+        const message = loadError instanceof Error ? loadError.message : "Failed to load recipes.";
         setError(message);
       } finally {
         setIsLoading(false);
       }
     };
 
-    void loadPosts();
+    void loadRecipes();
   }, []);
 
   return (
@@ -98,11 +97,11 @@ const Feed: React.FC<FeedProps> = ({ onLogout }) => {
           gap: 2.5,
         }}
       >
-        {posts.map((post) => (
-          <Post 
-            key={post._id} 
-            post={post} 
-            user={usersById[post.userID] ?? { _id: post.userID, username: "Unknown User" }}
+        {recipes.map((recipe) => (
+          <RecipeCard
+            key={recipe._id}
+            recipe={recipe}
+            user={usersById[recipe.userID] ?? { _id: recipe.userID, username: "Unknown User" }}
           />
         ))}
       </Box>

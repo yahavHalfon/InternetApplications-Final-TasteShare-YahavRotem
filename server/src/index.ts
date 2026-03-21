@@ -10,7 +10,6 @@ import { swaggerUi, swaggerSpec } from "./swagger";
 import recipeRoutes from "./routes/recipeRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import userRoutes from "./routes/userRoutes";
-import postRoutes from "./routes/postRoutes";
 
 const app = express();
 const UPLOADS_DIR = path.resolve(__dirname, "../uploads");
@@ -37,7 +36,6 @@ app.use("/auth", authRoute);
 app.use("/recipes", recipeRoutes);
 app.use("/comments", commentRoutes);
 app.use("/users", userRoutes);
-app.use("/posts", postRoutes);
 
 const initApp = () => {
   const promise = new Promise<Express>((resolve, reject) => {

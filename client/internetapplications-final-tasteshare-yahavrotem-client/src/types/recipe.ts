@@ -4,7 +4,7 @@ export interface User {
   profileImage?: string;
 }
 
-export interface Post {
+export interface RecipeFeedItem {
   _id: string;
   userID: string;
   content: string;
@@ -17,7 +17,7 @@ export interface Post {
   difficulty?: "Easy" | "Medium" | "Advanced";
 }
 
-export interface PostProps {
-  post: Post;
+export interface RecipeCardProps {
+  recipe: RecipeFeedItem;
   user: User;
 }

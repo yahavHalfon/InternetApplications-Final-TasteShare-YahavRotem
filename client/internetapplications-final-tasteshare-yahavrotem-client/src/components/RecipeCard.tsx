@@ -3,9 +3,9 @@ import { Box, Typography, Avatar, Paper } from "@mui/material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import type { PostProps } from "../types/post";
+import type { RecipeCardProps } from "../types/recipe";
 
-const Post: React.FC<PostProps> = ({ post, user }) => {
+const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, user }) => {
   return (
     <Paper
       variant="outlined"
@@ -19,21 +19,20 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
         },
       }}
     >
-      {/* Image Container */}
-      {post.image && (
+      {recipe.image && (
         <Box
           sx={{
             position: "relative",
             width: "100%",
-            paddingTop: "62.5%", // 16:10 aspect ratio
+            paddingTop: "62.5%",
             backgroundColor: "grey.100",
             overflow: "hidden",
           }}
         >
           <Box
             component="img"
-            src={post.image}
-            alt={post.title || "Post image"}
+            src={recipe.image}
+            alt={recipe.title || "Recipe image"}
             loading="lazy"
             sx={{
               position: "absolute",
@@ -48,7 +47,6 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
               },
             }}
           />
-          {/* Top Right Badges */}
           <Box
             sx={{
               position: "absolute",
@@ -58,7 +56,7 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
               gap: 1,
             }}
           >
-            {post.cookTime && (
+            {recipe.cookTime && (
               <Box
                 sx={{
                   display: "flex",
@@ -74,29 +72,29 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
               >
                 <AccessTimeIcon sx={{ fontSize: 11 }} />
                 <Typography sx={{ fontSize: 11, fontWeight: 500 }}>
-                  {post.cookTime}
+                  {recipe.cookTime}
                 </Typography>
               </Box>
             )}
-            {post.difficulty && (
+            {recipe.difficulty && (
               <Box
                 sx={{
                   px: 1,
                   py: 0.25,
                   borderRadius: 4,
                   backdropFilter: "blur(4px)",
-                  bgcolor: 
-                    post.difficulty === "Easy" ? "rgba(236, 253, 245, 0.9)" :
-                    post.difficulty === "Medium" ? "rgba(255, 251, 235, 0.9)" : 
+                  bgcolor:
+                    recipe.difficulty === "Easy" ? "rgba(236, 253, 245, 0.9)" :
+                    recipe.difficulty === "Medium" ? "rgba(255, 251, 235, 0.9)" :
                     "rgba(254, 242, 242, 0.9)",
-                  color: 
-                    post.difficulty === "Easy" ? "success.main" :
-                    post.difficulty === "Medium" ? "warning.main" : 
+                  color:
+                    recipe.difficulty === "Easy" ? "success.main" :
+                    recipe.difficulty === "Medium" ? "warning.main" :
                     "error.main",
                 }}
               >
                 <Typography sx={{ fontSize: 11, fontWeight: 500 }}>
-                  {post.difficulty}
+                  {recipe.difficulty}
                 </Typography>
               </Box>
             )}
@@ -104,9 +102,7 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
         </Box>
       )}
 
-      {/* Content */}
       <Box sx={{ p: 2 }}>
-        {/* User Info */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
           <Avatar
             src={user.profileImage}
@@ -120,12 +116,11 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
           </Typography>
           <Typography sx={{ fontSize: 12, color: "grey.300" }}>·</Typography>
           <Typography sx={{ fontSize: 12, color: "grey.400" }}>
-            {post.createdAt}
+            {recipe.createdAt}
           </Typography>
         </Box>
 
-        {/* Text */}
-        {post.title && (
+        {recipe.title && (
           <Typography
             sx={{
               fontSize: 15,
@@ -134,7 +129,7 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
               mb: 0.5,
             }}
           >
-            {post.title}
+            {recipe.title}
           </Typography>
         )}
         <Typography
@@ -149,10 +144,9 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
             mb: 2,
           }}
         >
-          {post.content}
+          {recipe.content}
         </Typography>
 
-        {/* Actions */}
         <Box
           sx={{
             display: "flex",
@@ -166,13 +160,13 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", "&:hover .icon": { color: "error.light" } }}>
             <FavoriteBorderIcon className="icon" sx={{ fontSize: 17, color: "grey.400", transition: "color 0.2s" }} />
             <Typography sx={{ fontSize: 12, color: "grey.400" }}>
-              {post.likesCount}
+              {recipe.likesCount}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", "&:hover .icon": { color: "warning.light" } }}>
             <ChatBubbleOutlineIcon className="icon" sx={{ fontSize: 17, color: "grey.400", transition: "color 0.2s" }} />
             <Typography sx={{ fontSize: 12, color: "grey.400" }}>
-              {post.commentsCount}
+              {recipe.commentsCount}
             </Typography>
           </Box>
         </Box>
@@ -181,4 +175,4 @@ const Post: React.FC<PostProps> = ({ post, user }) => {
   );
 };
 
-export default Post;
+export default RecipeCard;
