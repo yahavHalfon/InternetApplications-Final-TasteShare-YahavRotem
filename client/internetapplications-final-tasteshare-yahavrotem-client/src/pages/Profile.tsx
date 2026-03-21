@@ -3,6 +3,7 @@ import { Camera, ChefHat, Link2, MapPin } from "lucide-react";
 import { API_BASE_URL } from "../config/env";
 import { userService, type ApiUser } from "../services/userService";
 import type { AuthUser } from "../services/authService";
+import MyRecipesSection from "../components/MyRecipesSection";
 import "./Profile.css";
 
 type ProfileProps = {
@@ -311,6 +312,8 @@ function Profile({ token, initialUser, onProfileUpdated }: ProfileProps) {
           )}
         </div>
       </div>
+
+      <MyRecipesSection token={token} />
     </section>
   );
 }
