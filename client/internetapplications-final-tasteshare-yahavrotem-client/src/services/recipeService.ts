@@ -75,4 +75,20 @@ const createRecipe = async (payload: CreateRecipePayload, token: string): Promis
 export const recipeService = {
   getRecipes,
   createRecipe,
+  toggleLike: async (recipeId: string, token: string): Promise<ApiRecipe> => {
+    const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}/like`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const fallbackMessage = "Failed to toggle like.";
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error || fallbackMessage);
+    }
+
+    return (await response.json()) as ApiRecipe;
+  },
 };
