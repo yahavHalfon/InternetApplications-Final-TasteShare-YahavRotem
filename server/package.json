@@ -17,6 +17,8 @@
   "scripts": {
     "start": "tsc && node --env-file=.env.dev ./dist/src/server.js",
     "dev": "nodemon  ./src/server.ts",
+    "seed": "ts-node ./src/seed.ts",
+    "seed:posts": "ts-node ./src/seedPosts.ts",
     "test": "jest --detectOpenHandles --forceExit --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
