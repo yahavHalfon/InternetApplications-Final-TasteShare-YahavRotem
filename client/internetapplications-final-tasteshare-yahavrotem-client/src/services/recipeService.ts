@@ -24,7 +24,7 @@ export type PaginatedRecipesResponse = {
   hasMore: boolean;
 };
 
-const getRecipes = async (page: number, limit: number): Promise<PaginatedRecipesResponse> => {
+export const getRecipes = async (page: number, limit: number): Promise<PaginatedRecipesResponse> => {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),

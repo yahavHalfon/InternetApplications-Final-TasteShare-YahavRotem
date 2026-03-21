@@ -1,20 +1,52 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import RecipeCard from "../components/RecipeCard";
-import type { RecipeFeedItem, User } from "../types/recipe";
+import type { RecipeFeedItem } from "../types/recipe";
 import { recipeService } from "../services/recipeService";
+import { userService } from "../services/userService";
 
 const PAGE_SIZE = 9;
 
 const Feed: React.FC = () => {
   const [recipes, setRecipes] = useState<RecipeFeedItem[]>([]);
-  const [usersById, setUsersById] = useState<Record<string, User>>({});
+  const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pageRef = useRef(1);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const usernamesCacheRef = useRef<Record<string, string>>({});
+
+  const resolveUsernames = useCallback(async (userIds: string[]) => {
+    const uniqueIds = Array.from(new Set(userIds));
+    const missingIds = uniqueIds.filter((id) => !usernamesCacheRef.current[id]);
+
+    if (missingIds.length === 0) {
+      return;
+    }
+
+    const results = await Promise.allSettled(
+      missingIds.map(async (id) => {
+        const user = await userService.getUserById(id);
+        const username = user?.username?.trim();
+        return {
+          id,
+          username: username && username.length > 0 ? username : "Unknown User",
+        };
+      }),
+    );
+
+    const updates: Record<string, string> = {};
+
+    results.forEach((result, index) => {
+      const id = missingIds[index];
+      updates[id] = result.status === "fulfilled" ? result.value.username : "Unknown User";
+    });
+
+    usernamesCacheRef.current = { ...usernamesCacheRef.current, ...updates };
+    setUsernamesById((prev) => ({ ...prev, ...updates }));
+  }, []);
 
   const loadRecipes = useCallback(async (page: number, append: boolean) => {
     try {
@@ -41,16 +73,9 @@ const Feed: React.FC = () => {
         difficulty: recipe.difficulty,
       }));
 
-      const mappedUsers = incomingRecipes.reduce<Record<string, User>>((acc, recipe) => {
-        acc[recipe.userId] = {
-          _id: recipe.userId,
-          username: "TasteShare Chef",
-        };
-        return acc;
-      }, {});
+      await resolveUsernames(mappedRecipes.map((recipe) => recipe.userID));
 
       setRecipes((prev) => (append ? [...prev, ...mappedRecipes] : mappedRecipes));
-      setUsersById((prev) => ({ ...prev, ...mappedUsers }));
       setHasMore(response.hasMore);
       pageRef.current = page;
     } catch (loadError) {
@@ -60,7 +85,7 @@ const Feed: React.FC = () => {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, []);
+  }, [resolveUsernames]);
 
   useEffect(() => {
     void loadRecipes(1, false);
@@ -91,16 +116,13 @@ const Feed: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: "100vh", p: { xs: 2, md: 4 }, bgcolor: "background.default" }}>
-      {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Box>
-          <Typography variant="h5" sx={{ fontWeight: 600, color: "grey.900", mb: 0.5 }}>
-            Recipe Feed
-          </Typography>
-          <Typography variant="body2" sx={{ color: "grey.500" }}>
-            Discover delicious recipes from the community
-          </Typography>
-        </Box>
+        <Typography variant="h5" sx={{ fontWeight: 600, color: "grey.900", mb: 0.5 }}>
+          Recipe Feed
+        </Typography>
+        <Typography variant="body2" sx={{ color: "grey.500" }}>
+          Discover delicious recipes from the community
+        </Typography>
       </Box>
 
       {isLoading ? (
@@ -125,7 +147,10 @@ const Feed: React.FC = () => {
           <RecipeCard
             key={recipe._id}
             recipe={recipe}
-            user={usersById[recipe.userID] ?? { _id: recipe.userID, username: "Unknown User" }}
+            user={{
+              _id: recipe.userID,
+              username: usernamesById[recipe.userID] ?? "Unknown User",
+            }}
           />
         ))}
       </Box>
