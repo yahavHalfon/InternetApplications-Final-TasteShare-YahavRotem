@@ -53,16 +53,14 @@ describe("Comment Tests", () => {
         const response = await request(app)
             .post("/recipes")
             .set("Authorization", "Bearer " + accessToken)
-            .send({
-                image: "https://example.com/recipe.jpg",
-                title: "Test Recipe for Comments",
-                description: "This recipe will be used for comment tests",
-                ingredients: ["1 cup flour"],
-                instructions: ["Mix ingredients"],
-                cookTime: "25 min",
-                servings: 2,
-                difficulty: "Easy",
-            });
+            .field("title", "Test Recipe for Comments")
+            .field("description", "This recipe will be used for comment tests")
+            .field("ingredients", JSON.stringify(["1 cup flour"]))
+            .field("instructions", JSON.stringify(["Mix ingredients"]))
+            .field("cookTime", "25 min")
+            .field("servings", "2")
+            .field("difficulty", "Easy")
+            .attach("image", Buffer.from("fake-image-data"), "recipe.jpg");
         expect(response.statusCode).toBe(201);
         recipeId = response.body._id;
     });

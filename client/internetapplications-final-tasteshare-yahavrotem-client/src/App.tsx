@@ -18,6 +18,7 @@ import {
 import { GOOGLE_CLIENT_ID } from "./config/env";
 import { authService, type AuthSession } from "./services/authService";
 import Feed from "./pages/Feed";
+import CreateRecipe from "./pages/CreateRecipe";
 import Navbar from "./components/Navbar";
 import "./App.css";
 
@@ -333,6 +334,8 @@ function App() {
                 element={
                   route.path === "/feed" ? (
                     <Feed />
+                  ) : route.path === "/create" ? (
+                    <CreateRecipe token={session.token} />
                   ) : (
                     <section className="app-view-card">
                       <h1>{route.title}</h1>

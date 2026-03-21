@@ -50,13 +50,12 @@ describe("Recipe Tests", () => {
     let recipeId: string;
 
     const recipePayload = {
-        image: "https://example.com/recipe.jpg",
         title: "Test Recipe",
         description: "Test recipe description",
-        ingredients: ["1 cup flour"],
-        instructions: ["Mix ingredients"],
+        ingredients: JSON.stringify(["1 cup flour"]),
+        instructions: JSON.stringify(["Mix ingredients"]),
         cookTime: "25 min",
-        servings: 2,
+        servings: "2",
         difficulty: "Easy",
     };
 
@@ -64,14 +63,30 @@ describe("Recipe Tests", () => {
         const response = await request(app)
             .post("/recipes")
             .set("Authorization", "Bearer " + accessToken)
-            .send(recipePayload);
+            .field("title", recipePayload.title)
+            .field("description", recipePayload.description)
+            .field("ingredients", recipePayload.ingredients)
+            .field("instructions", recipePayload.instructions)
+            .field("cookTime", recipePayload.cookTime)
+            .field("servings", recipePayload.servings)
+            .field("difficulty", recipePayload.difficulty)
+            .attach("image", Buffer.from("fake-image-data"), "recipe.jpg");
         expect(response.statusCode).toBe(201);
         expect(response.body.userId).toBe(userId);
         recipeId = response.body._id;
     });
 
     test("Create Recipe - Fail (No Auth)", async () => {
-        const response = await request(app).post("/recipes").send(recipePayload);
+        const response = await request(app)
+            .post("/recipes")
+            .field("title", recipePayload.title)
+            .field("description", recipePayload.description)
+            .field("ingredients", recipePayload.ingredients)
+            .field("instructions", recipePayload.instructions)
+            .field("cookTime", recipePayload.cookTime)
+            .field("servings", recipePayload.servings)
+            .field("difficulty", recipePayload.difficulty)
+            .attach("image", Buffer.from("fake-image-data"), "recipe.jpg");
         expect(response.statusCode).toBe(401);
     });
 
@@ -79,9 +94,8 @@ describe("Recipe Tests", () => {
         const response = await request(app)
             .post("/recipes")
             .set("Authorization", "Bearer " + accessToken)
-            .send({
-                // Missing required recipe fields
-            });
+            .field("title", "Only title")
+            .attach("image", Buffer.from("fake-image-data"), "recipe.jpg");
         expect(response.statusCode).toBe(400);
     });
 

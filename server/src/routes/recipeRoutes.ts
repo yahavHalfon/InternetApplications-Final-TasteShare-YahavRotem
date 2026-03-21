@@ -1,5 +1,6 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware";
+import { uploadRecipeImage } from "../middleware/upload";
 const router = express.Router();
 import recipeController from "../controllers/recipeController";
 
@@ -110,7 +111,7 @@ router.get("/:id", recipeController.getById.bind(recipeController));
  *       400:
  *         description: Bad request
  */
-router.post("/", authMiddleware, recipeController.create.bind(recipeController));
+router.post("/", authMiddleware, uploadRecipeImage.single("image"), recipeController.create.bind(recipeController));
 
 /**
  * @swagger

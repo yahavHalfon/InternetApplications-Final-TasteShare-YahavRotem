@@ -6,6 +6,41 @@ import CommentModel from "../model/commentModel";
 import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 
+const parseStringArray = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+        return value
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+
+    if (typeof value !== "string") {
+        return [];
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(trimmed) as unknown;
+        if (Array.isArray(parsed)) {
+            return parsed
+                .filter((item): item is string => typeof item === "string")
+                .map((item) => item.trim())
+                .filter(Boolean);
+        }
+    } catch {
+        return trimmed
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
 class RecipeController extends BaseController<IRecipe> {
     constructor() {
         super(Recipe);
@@ -40,7 +75,27 @@ class RecipeController extends BaseController<IRecipe> {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        req.body.userId = userId;
+        if (!req.file) {
+            return res.status(400).json({ error: "Recipe image is required" });
+        }
+
+        const servings = typeof req.body.servings === "string"
+            ? Number.parseInt(req.body.servings, 10)
+            : req.body.servings;
+
+        req.body = {
+            userId,
+            image: `/uploads/recipes/${req.file.filename}`,
+            title: typeof req.body.title === "string" ? req.body.title.trim() : req.body.title,
+            description: typeof req.body.description === "string" ? req.body.description.trim() : req.body.description,
+            ingredients: parseStringArray(req.body.ingredients),
+            instructions: parseStringArray(req.body.instructions),
+            cookTime: typeof req.body.cookTime === "string" ? req.body.cookTime.trim() : req.body.cookTime,
+            servings,
+            difficulty: req.body.difficulty,
+            likedBy: [],
+        };
+
         return super.create(req, res);
     }
 
