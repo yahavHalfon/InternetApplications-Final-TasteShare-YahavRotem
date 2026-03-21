@@ -2,7 +2,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
+const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
 const createStorage = (subDirectory?: string) => multer.diskStorage({
@@ -32,6 +32,12 @@ const fileFilter = (
 
 export const upload = multer({
   storage: createStorage(),
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+export const uploadProfileImage = multer({
+  storage: createStorage("profiles"),
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 },
 });

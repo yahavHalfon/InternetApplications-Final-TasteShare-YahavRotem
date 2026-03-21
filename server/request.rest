@@ -34,45 +34,51 @@ Content-Type: application/json
     "refreshToken": "{{login.response.body.refreshToken}}"
 }
 
-### Get all posts
-GET http://localhost:3000/post
+### Get all recipes
+GET http://localhost:3000/recipes
 
-### Get posts by sender
-GET http://localhost:3000/post?sender=REPLACE_WITH_SENDER_ID
+### Get recipes
+GET http://localhost:3000/recipes
 
-### Get post by ID
-GET http://localhost:3000/post/REPLACE_WITH_VALID_ID
+### Get recipe by ID
+GET http://localhost:3000/recipes/REPLACE_WITH_VALID_ID
 
-### Create a new post
-# @name createPost
-POST http://localhost:3000/post
+### Create a new recipe
+# @name createRecipe
+POST http://localhost:3000/recipes
 Authorization: Bearer {{login.response.body.token}}
 Content-Type: application/json
 
 {
-    "title": "My Post Title",
-    "content": "This is content of my post"
+    "title": "My Recipe Title",
+    "description": "This is a recipe description",
+    "image": "https://example.com/recipe.jpg",
+    "ingredients": ["1 cup flour"],
+    "instructions": ["Mix ingredients"],
+    "cookTime": "25 min",
+    "servings": 2,
+    "difficulty": "Easy"
 }
 
-### Update a post
-PUT http://localhost:3000/post/{{createPost.response.body._id}}
+### Update a recipe
+PUT http://localhost:3000/recipes/{{createRecipe.response.body._id}}
 Authorization: Bearer {{login.response.body.token}}
 Content-Type: application/json
 
 {
-    "title": "Updated Post Title",
-    "content": "Updated content"
+    "title": "Updated Recipe Title",
+    "description": "Updated recipe description"
 }
 
-### Delete a post
-DELETE http://localhost:3000/post/{{createPost.response.body._id}}
+### Delete a recipe
+DELETE http://localhost:3000/recipes/{{createRecipe.response.body._id}}
 Authorization: Bearer {{login.response.body.token}}
 
 ### Get all comments
 GET http://localhost:3000/comments
 
-### Get comments by post
-GET http://localhost:3000/comments?postId=REPLACE_WITH_VALID_ID
+### Get comments by recipe
+GET http://localhost:3000/comments?recipeId=REPLACE_WITH_VALID_ID
 
 ### Get comment by ID
 GET http://localhost:3000/comments/REPLACE_WITH_VALID_ID
@@ -84,8 +90,8 @@ Authorization: Bearer {{login.response.body.token}}
 Content-Type: application/json
 
 {
-    "postId": "{{createPost.response.body._id}}",
-    "message": "This is a comment"
+    "recipeId": "{{createRecipe.response.body._id}}",
+    "text": "This is a comment"
 }
 
 ### Update a comment
@@ -94,7 +100,7 @@ Authorization: Bearer {{login.response.body.token}}
 Content-Type: application/json
 
 {
-    "message": "Updated Comment Content"
+    "text": "Updated comment content"
 }
 
 ### Delete a comment

@@ -79,20 +79,46 @@ class RecipeController extends BaseController<IRecipe> {
             return res.status(400).json({ error: "Recipe image is required" });
         }
 
+        const title = typeof req.body.title === "string" ? req.body.title.trim() : "";
+        const description = typeof req.body.description === "string" ? req.body.description.trim() : "";
+        const ingredients = parseStringArray(req.body.ingredients);
+        const instructions = parseStringArray(req.body.instructions);
+        const cookTime = typeof req.body.cookTime === "string" ? req.body.cookTime.trim() : "";
         const servings = typeof req.body.servings === "string"
             ? Number.parseInt(req.body.servings, 10)
             : req.body.servings;
+        const difficulty = req.body.difficulty;
+
+        if (!title || !description || !cookTime) {
+            return res.status(400).json({ error: "Title, description and cook time are required" });
+        }
+
+        if (!ingredients.length) {
+            return res.status(400).json({ error: "At least one ingredient is required" });
+        }
+
+        if (!instructions.length) {
+            return res.status(400).json({ error: "At least one instruction is required" });
+        }
+
+        if (!Number.isInteger(servings) || servings < 1) {
+            return res.status(400).json({ error: "Servings must be at least 1" });
+        }
+
+        if (!["Easy", "Medium", "Advanced"].includes(difficulty)) {
+            return res.status(400).json({ error: "Invalid difficulty" });
+        }
 
         req.body = {
             userId,
             image: `/uploads/recipes/${req.file.filename}`,
-            title: typeof req.body.title === "string" ? req.body.title.trim() : req.body.title,
-            description: typeof req.body.description === "string" ? req.body.description.trim() : req.body.description,
-            ingredients: parseStringArray(req.body.ingredients),
-            instructions: parseStringArray(req.body.instructions),
-            cookTime: typeof req.body.cookTime === "string" ? req.body.cookTime.trim() : req.body.cookTime,
+            title,
+            description,
+            ingredients,
+            instructions,
+            cookTime,
             servings,
-            difficulty: req.body.difficulty,
+            difficulty,
             likedBy: [],
         };
 

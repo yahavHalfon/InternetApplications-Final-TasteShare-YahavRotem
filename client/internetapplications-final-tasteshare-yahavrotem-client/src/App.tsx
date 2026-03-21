@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { Navigate, Route, Routes } from "react-router-dom";
+import slugify from "slugify";
 import {
   ArrowLeft,
   ArrowRight,
@@ -33,15 +34,8 @@ type Notification = {
 const ACCESS_TOKEN_STORAGE_KEY = "accessToken";
 const REFRESH_TOKEN_STORAGE_KEY = "refreshToken";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const normalizeUsername = (value: string): string => {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "")
-    .replace(/[^a-z0-9._]/g, "")
-    .slice(0, 30);
-};
+const normalizeUsername = (value: string): string =>
+  slugify(value, { lower: true, strict: true, trim: true, replacement: "" }).slice(0, 30);
 
 const authRoutes = [
   {
@@ -56,7 +50,7 @@ const authRoutes = [
   },
   {
     path: "/create",
-    title: "Add Post",
+    title: "Add Recipe",
     description: "Share your next recipe with the TasteShare community.",
   },
   {
@@ -220,7 +214,10 @@ function App() {
       formData.append("email", email.trim().toLowerCase());
       formData.append("password", password);
       formData.append("name", name.trim());
-      formData.append("username", normalizeUsername(username || name));
+      formData.append(
+        "username",
+        normalizeUsername(username || name),
+      );
       formData.append("bio", bio.trim());
       formData.append("location", location.trim());
       formData.append("website", website.trim());

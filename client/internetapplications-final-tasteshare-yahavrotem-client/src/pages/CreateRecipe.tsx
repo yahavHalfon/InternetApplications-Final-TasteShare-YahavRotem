@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ImagePlus, Plus, Trash2, X } from "lucide-react";
+import { Alert, CircularProgress } from "@mui/material";
 import { recipeService } from "../services/recipeService";
 import "./CreateRecipe.css";
 
@@ -12,6 +13,21 @@ type Difficulty = "Easy" | "Medium" | "Advanced";
 
 const defaultIngredient = "";
 const defaultInstruction = "";
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+const hourOptions = Array.from({ length: 13 }, (_, index) => index);
+const minuteOptions = Array.from({ length: 12 }, (_, index) => index * 5);
+
+const formatCookDuration = (hours: number, minutes: number): string => {
+  const segments: string[] = [];
+  if (hours > 0) {
+    segments.push(`${hours} hr`);
+  }
+  if (minutes > 0) {
+    segments.push(`${minutes} min`);
+  }
+  return segments.join(" ");
+};
 
 function CreateRecipe({ token }: CreateRecipeProps) {
   const navigate = useNavigate();
@@ -23,13 +39,16 @@ function CreateRecipe({ token }: CreateRecipeProps) {
   const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([defaultIngredient]);
   const [instructions, setInstructions] = useState<string[]>([defaultInstruction]);
-  const [cookTime, setCookTime] = useState("");
+  const [cookHours, setCookHours] = useState("0");
+  const [cookMinutes, setCookMinutes] = useState("25");
   const [servings, setServings] = useState("");
   const [difficulty, setDifficulty] = useState<Difficulty>("Easy");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const canSubmit = useMemo(() => {
+    const hasCookDuration = Number(cookHours) > 0 || Number(cookMinutes) > 0;
+
     return (
       !isSubmitting
       && !!imageFile
@@ -37,10 +56,10 @@ function CreateRecipe({ token }: CreateRecipeProps) {
       && description.trim().length > 0
       && ingredients.some((item) => item.trim().length > 0)
       && instructions.some((item) => item.trim().length > 0)
-      && cookTime.trim().length > 0
+      && hasCookDuration
       && Number(servings) > 0
     );
-  }, [cookTime, description, imageFile, ingredients, instructions, isSubmitting, servings, title]);
+  }, [cookHours, cookMinutes, description, imageFile, ingredients, instructions, isSubmitting, servings, title]);
 
   const updateIngredient = (index: number, value: string) => {
     setIngredients((prev) => prev.map((current, i) => (i === index ? value : current)));
@@ -69,6 +88,24 @@ function CreateRecipe({ token }: CreateRecipeProps) {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
+      return;
+    }
+
+    setError("");
+
+    if (!allowedImageTypes.has(file.type)) {
+      setError("Only JPG, PNG, GIF or WebP images are allowed.");
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setError("Image is too large. Max size is 5 MB.");
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
       return;
     }
 
@@ -107,7 +144,7 @@ function CreateRecipe({ token }: CreateRecipeProps) {
           description,
           ingredients: ingredients.map((item) => item.trim()).filter(Boolean),
           instructions: instructions.map((item) => item.trim()).filter(Boolean),
-          cookTime,
+          cookTime: formatCookDuration(Number(cookHours), Number(cookMinutes)),
           servings: Number(servings),
           difficulty,
         },
@@ -137,7 +174,12 @@ function CreateRecipe({ token }: CreateRecipeProps) {
             disabled={!canSubmit}
             onClick={() => void handleSubmit()}
           >
-            {isSubmitting ? "Publishing..." : "Publish Recipe"}
+            {isSubmitting ? (
+              <>
+                <CircularProgress size={14} thickness={5} color="inherit" />
+                Publishing...
+              </>
+            ) : "Publish Recipe"}
           </button>
         </div>
       </div>
@@ -254,14 +296,26 @@ function CreateRecipe({ token }: CreateRecipeProps) {
             <h3>Recipe Details</h3>
 
             <label className="create-recipe-sidebar-label" htmlFor="cook-time">Cook Time</label>
-            <input
-              id="cook-time"
-              type="text"
-              value={cookTime}
-              onChange={(event) => setCookTime(event.target.value)}
-              placeholder="e.g., 25 min"
-              className="create-recipe-sidebar-input"
-            />
+            <div id="cook-time" className="create-recipe-duration-row" role="group" aria-label="Cook duration picker">
+              <select
+                value={cookHours}
+                onChange={(event) => setCookHours(event.target.value)}
+                className="create-recipe-sidebar-input create-recipe-duration-input"
+              >
+                {hourOptions.map((hour) => (
+                  <option key={hour} value={String(hour)}>{hour} hr</option>
+                ))}
+              </select>
+              <select
+                value={cookMinutes}
+                onChange={(event) => setCookMinutes(event.target.value)}
+                className="create-recipe-sidebar-input create-recipe-duration-input"
+              >
+                {minuteOptions.map((minute) => (
+                  <option key={minute} value={String(minute)}>{minute} min</option>
+                ))}
+              </select>
+            </div>
 
             <label className="create-recipe-sidebar-label" htmlFor="servings">Servings</label>
             <input
@@ -288,7 +342,11 @@ function CreateRecipe({ token }: CreateRecipeProps) {
               ))}
             </div>
 
-            {error ? <p className="create-recipe-error">{error}</p> : null}
+            {error ? (
+              <Alert severity="error" sx={{ mb: 1.5, fontSize: "13px", py: 0.5 }}>
+                {error}
+              </Alert>
+            ) : null}
 
             <button
               type="button"
@@ -296,7 +354,12 @@ function CreateRecipe({ token }: CreateRecipeProps) {
               disabled={!canSubmit}
               onClick={() => void handleSubmit()}
             >
-              {isSubmitting ? "Publishing..." : "Publish Recipe"}
+              {isSubmitting ? (
+                <>
+                  <CircularProgress size={14} thickness={5} color="inherit" />
+                  Publishing...
+                </>
+              ) : "Publish Recipe"}
             </button>
           </section>
         </aside>

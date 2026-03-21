@@ -146,93 +146,105 @@ curl -X POST http://localhost:3000/auth/logout \
 }'
 ```
 
-### Posts
+### Recipes
 
-#### Get all posts
+#### Get all recipes
 
-**URL** : `/post`
+**URL** : `/recipes`
 **Method** : `GET`
 **Curl Example** :
 ```bash
-curl http://localhost:3000/post
+curl http://localhost:3000/recipes
 ```
 
-#### Get posts by sender
+#### Get recipes
 
-**URL** : `/post?sender=<SENDER_ID>`
-**Method** : `GET`
-
-**Curl Example** :
-```bash
-curl "http://localhost:3000/post?sender=<SENDER_ID>"
-```
-
-#### Get a post by ID
-
-**URL** : `/post/:id`
+**URL** : `/recipes`
 **Method** : `GET`
 
 **Curl Example** :
 ```bash
-curl http://localhost:3000/post/<POST_ID>
+curl "http://localhost:3000/recipes"
 ```
 
-#### Create a new post
+#### Get a recipe by ID
 
-**URL** : `/post`
+**URL** : `/recipes/:id`
+**Method** : `GET`
+
+**Curl Example** :
+```bash
+curl http://localhost:3000/recipes/<RECIPE_ID>
+```
+
+#### Create a new recipe
+
+**URL** : `/recipes`
 **Method** : `POST`
 **Headers** : `Authorization: Bearer <token>`
 **Body** :
 ```json
 {
-    "title": "My Post Title",
-    "content": "Content of the post"
+    "title": "My Recipe Title",
+    "description": "Recipe description",
+    "image": "https://example.com/recipe.jpg",
+    "ingredients": ["1 cup flour"],
+    "instructions": ["Mix ingredients"],
+    "cookTime": "25 min",
+    "servings": 2,
+    "difficulty": "Easy"
 }
 ```
 **Curl Example** :
 ```bash
-curl -X POST http://localhost:3000/post \
+curl -X POST http://localhost:3000/recipes \
 -H "Authorization: Bearer <token>" \
 -H "Content-Type: application/json" \
 -d '{
-    "title": "My First Post",
-    "content": "This is the content of my first post."
+    "title": "My First Recipe",
+    "description": "This is the description of my first recipe.",
+    "image": "https://example.com/recipe.jpg",
+    "ingredients": ["1 cup flour"],
+    "instructions": ["Mix ingredients"],
+    "cookTime": "25 min",
+    "servings": 2,
+    "difficulty": "Easy"
 }'
 ```
 
-#### Update a post
+#### Update a recipe
 
-**URL** : `/post/:id`
+**URL** : `/recipes/:id`
 **Method** : `PUT`
 **Headers** : `Authorization: Bearer <token>`
 **Body** :
 ```json
 {
     "title": "Updated Title",
-    "content": "Updated Content"
+    "description": "Updated Description"
 }
 ```
 
 **Curl Example** :
 ```bash
-curl -X PUT http://localhost:3000/post/<POST_ID> \
+curl -X PUT http://localhost:3000/recipes/<RECIPE_ID> \
 -H "Authorization: Bearer <token>" \
 -H "Content-Type: application/json" \
 -d '{
     "title": "Updated Title",
-    "content": "Updated Content"
+    "description": "Updated Description"
 }'
 ```
 
-#### Delete a post
+#### Delete a recipe
 
-**URL** : `/post/:id`
+**URL** : `/recipes/:id`
 **Method** : `DELETE`
 **Headers** : `Authorization: Bearer <token>`
 
 **Curl Example** :
 ```bash
-curl -X DELETE http://localhost:3000/post/<POST_ID> \
+curl -X DELETE http://localhost:3000/recipes/<RECIPE_ID> \
 -H "Authorization: Bearer <token>"
 ```
 

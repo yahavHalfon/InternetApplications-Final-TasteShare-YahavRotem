@@ -39,6 +39,10 @@
   height: 40px;
   padding: 0 20px;
   font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   cursor: pointer;
   transition: all 120ms ease;
 }
@@ -327,6 +331,18 @@
 .create-recipe-sidebar-input {
   margin-bottom: 14px;
   font-size: 13px;
+}
+
+.create-recipe-duration-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.create-recipe-duration-input {
+  margin-bottom: 0;
+  appearance: none;
 }
 
 .create-recipe-difficulty-grid {
