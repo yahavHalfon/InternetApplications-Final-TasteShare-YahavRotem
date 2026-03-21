@@ -3,12 +3,35 @@ import type { IRecipe } from "../model/recipeModel";
 import BaseController from "./baseController";
 
 import CommentModel from "../model/commentModel";
-import { Response } from "express";
+import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 
 class RecipeController extends BaseController<IRecipe> {
     constructor() {
         super(Recipe);
+    }
+
+    async get(req: Request, res: Response) {
+        const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 10));
+        const skip = (page - 1) * limit;
+
+        try {
+            const [total, data] = await Promise.all([
+                Recipe.countDocuments({}),
+                Recipe.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit),
+            ]);
+
+            return res.status(200).json({
+                data,
+                page,
+                limit,
+                total,
+                hasMore: skip + data.length < total,
+            });
+        } catch (error) {
+            return this.handleError(res, error);
+        }
     }
 
     async create(req: AuthRequest, res: Response) {

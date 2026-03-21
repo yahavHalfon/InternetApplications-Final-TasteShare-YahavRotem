@@ -20,6 +20,42 @@
   animation: auth-fade-up 240ms ease;
 }
 
+.app-shell {
+  min-height: 100vh;
+  background: #f8f8fa;
+}
+
+.app-content {
+  margin-left: 240px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 32px;
+}
+
+.app-view-card {
+  width: 100%;
+  max-width: 760px;
+  background: #ffffff;
+  border: 1px solid #f0f0f3;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.app-view-card h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.app-view-card p {
+  margin: 10px 0 24px;
+  color: #6b7280;
+  font-size: 15px;
+}
+
 .auth-card-wide {
   max-width: 520px;
 }
