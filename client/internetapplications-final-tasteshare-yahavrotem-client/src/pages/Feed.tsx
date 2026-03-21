@@ -3,30 +3,10 @@ import { Box, Typography, CircularProgress } from "@mui/material";
 import RecipeCard from "../components/RecipeCard";
 import type { RecipeFeedItem } from "../types/recipe";
 import { API_BASE_URL } from "../config/env";
+import { recipeService } from "../services/recipeService";
+import { userService } from "../services/userService";
 
 const PAGE_SIZE = 9;
-
-type ApiRecipe = {
-  _id: string;
-  userId: string;
-  image: string;
-  title: string;
-  description: string;
-  likedBy?: string[];
-  cookTime: string;
-  difficulty: "Easy" | "Medium" | "Advanced";
-  createdAt: string;
-};
-
-type PaginatedRecipesResponse = {
-  data: ApiRecipe[];
-  hasMore: boolean;
-};
-
-type ApiUser = {
-  name?: string;
-  avatarUrl?: string;
-};
 
 type FeedUserView = {
   username: string;
@@ -38,30 +18,6 @@ const toApiAssetUrl = (assetPath?: string): string | undefined => {
     return undefined;
   }
   return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
-};
-
-const fetchRecipes = async (page: number, limit: number): Promise<PaginatedRecipesResponse> => {
-  const params = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
-  });
-
-  const response = await fetch(`${API_BASE_URL}/recipes?${params.toString()}`);
-  if (!response.ok) {
-    const fallbackMessage = "Failed to load recipes.";
-    const data = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(data?.error || fallbackMessage);
-  }
-
-  return (await response.json()) as PaginatedRecipesResponse;
-};
-
-const fetchUserById = async (userId: string): Promise<ApiUser | null> => {
-  const response = await fetch(`${API_BASE_URL}/users/${userId}`);
-  if (!response.ok) {
-    return null;
-  }
-  return (await response.json()) as ApiUser;
 };
 
 const Feed: React.FC = () => {
@@ -90,7 +46,7 @@ const Feed: React.FC = () => {
 
     const results = await Promise.allSettled(
       missingIds.map(async (id) => {
-        const user = await fetchUserById(id);
+        const user = await userService.getUserById(id);
         const name = user?.name?.trim();
         const displayName = name && name.length > 0 ? name : "Unknown User";
         return {
@@ -126,7 +82,7 @@ const Feed: React.FC = () => {
       }
       setError(null);
 
-      const response = await fetchRecipes(page, PAGE_SIZE);
+      const response = await recipeService.getRecipes(page, PAGE_SIZE);
       const incomingRecipes = response.data;
 
       const mappedRecipes: RecipeFeedItem[] = incomingRecipes.map((recipe) => ({

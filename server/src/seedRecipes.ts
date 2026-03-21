@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { Types } from "mongoose";
 import dotenv from "dotenv";
 import User from "./model/userModel";
 import Recipe, { type RecipeDifficulty } from "./model/recipeModel";
@@ -21,7 +22,10 @@ type SeedRecipe = {
   difficulty: RecipeDifficulty;
 };
 
-const seedRecipes: SeedRecipe[] = [
+const TOTAL_RECIPES = 100;
+const UNKNOWN_USER_RECIPES = 40;
+
+const recipeTemplates: SeedRecipe[] = [
   {
     image:
       "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&w=1200&q=80",
@@ -100,30 +104,49 @@ const seedRecipes: SeedRecipe[] = [
   },
 ];
 
-async function seedThreeRecipes() {
+const buildSeedRecipes = (knownUserId: Types.ObjectId) => {
+  return Array.from({ length: TOTAL_RECIPES }, (_, index) => {
+    const template = recipeTemplates[index % recipeTemplates.length];
+    const recipeNumber = String(index + 1).padStart(3, "0");
+    const usesUnknownUser = index >= TOTAL_RECIPES - UNKNOWN_USER_RECIPES;
+
+    return {
+      userId: usesUnknownUser ? new Types.ObjectId() : knownUserId,
+      image: template.image,
+      title: `Seed Recipe #${recipeNumber} - ${template.title}`,
+      description: template.description,
+      ingredients: template.ingredients,
+      instructions: template.instructions,
+      cookTime: template.cookTime,
+      servings: template.servings,
+      difficulty: template.difficulty,
+      likedBy: [],
+    };
+  });
+};
+
+async function seedRecipes() {
   try {
     console.log("Connecting to Mongo:", MONGODB_URI);
     await mongoose.connect(MONGODB_URI!, {});
 
-    const seedUser =
-      (await User.findOne({ email: "dummy@tasteshare.local" })) ||
-      (await User.findOne());
+    const preferredEmail = process.env.SEED_USER_EMAIL;
+    const seedUser = preferredEmail
+      ? await User.findOne({ email: preferredEmail.toLowerCase() })
+      : await User.findOne().sort({ updatedAt: -1 });
 
     if (!seedUser) {
       throw new Error("No user found. Run npm run seed first to create a seed user.");
     }
 
-    await Recipe.bulkWrite(
-      seedRecipes.map((recipe) => ({
-        updateOne: {
-          filter: { userId: seedUser._id, title: recipe.title },
-          update: { $set: { ...recipe, userId: seedUser._id, likedBy: [] } },
-          upsert: true,
-        },
-      }))
-    );
+    const recipesToInsert = buildSeedRecipes(seedUser._id);
 
-    console.log(`Seeded ${seedRecipes.length} recipes for user ${seedUser.email}.`);
+    await Recipe.deleteMany({ title: /^Seed Recipe #\d{3} - / });
+    await Recipe.insertMany(recipesToInsert);
+
+    console.log(`Seeded ${TOTAL_RECIPES} recipes.`);
+    console.log(`Known user recipes: ${TOTAL_RECIPES - UNKNOWN_USER_RECIPES} (user ${seedUser.email}).`);
+    console.log(`Unknown user recipes: ${UNKNOWN_USER_RECIPES} (random ObjectIds).`);
     process.exit(0);
   } catch (error) {
     console.error("Recipe seed failed:", error);
@@ -131,4 +154,4 @@ async function seedThreeRecipes() {
   }
 }
 
-void seedThreeRecipes();
+void seedRecipes();
