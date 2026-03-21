@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, ChefHat, Link2, MapPin } from "lucide-react";
 import { API_BASE_URL } from "../config/env";
 import { userService, type ApiUser } from "../services/userService";
@@ -37,22 +37,6 @@ const mapApiUserToAuthUser = (apiUser: ApiUser, fallback: AuthUser): AuthUser =>
     website: apiUser.website ?? fallback.website,
     location: apiUser.location ?? fallback.location,
   };
-};
-
-const getAvatarFallbackInitials = (name: string): string => {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "C";
-  }
-
-  const firstInitial = parts[0].charAt(0);
-  const lastInitial = parts.length > 1 ? parts[parts.length - 1].charAt(0) : "";
-
-  return `${firstInitial}${lastInitial}`.toUpperCase();
 };
 
 function Profile({ token, initialUser, onProfileUpdated }: ProfileProps) {
@@ -107,9 +91,8 @@ function Profile({ token, initialUser, onProfileUpdated }: ProfileProps) {
     };
   }, [imagePreviewUrl]);
 
-  const displayName = useMemo(() => form.name.trim() || profile.name || "Chef", [form.name, profile.name]);
-  const fallbackAvatarInitials = useMemo(() => getAvatarFallbackInitials(displayName), [displayName]);
   const hasProfileImage = Boolean(imagePreviewUrl.trim());
+  const avatarFallbackLetter = (profile.name.trim().split(/\s+/)[0] || "U").charAt(0).toUpperCase();
 
   const handleFormChange = (field: keyof ProfileForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -205,14 +188,10 @@ function Profile({ token, initialUser, onProfileUpdated }: ProfileProps) {
           <div className="profile-top-row">
             <div className="profile-avatar-wrap">
               {hasProfileImage ? (
-                <img
-                  src={imagePreviewUrl}
-                  alt={displayName}
-                  className="profile-avatar-lg"
-                />
+                <img src={imagePreviewUrl} alt={profile.username} className="profile-avatar-lg" />
               ) : (
-                <div className="profile-avatar-fallback" role="img" aria-label={`${displayName} initials`}>
-                  <span>{fallbackAvatarInitials}</span>
+                <div className="profile-avatar-fallback" role="img" aria-label={profile.username}>
+                  <span>{avatarFallbackLetter}</span>
                 </div>
               )}
               <div className="profile-chef-badge" aria-hidden="true">
