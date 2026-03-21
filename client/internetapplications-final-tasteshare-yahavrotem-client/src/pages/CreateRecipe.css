@@ -350,6 +350,19 @@
 
 .create-recipe-difficulty {
   flex: 1;
+  position: relative;
+}
+
+.create-recipe-difficulty-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.create-recipe-difficulty-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 36px;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
@@ -359,19 +372,19 @@
   cursor: pointer;
 }
 
-.create-recipe-difficulty.active.create-recipe-difficulty-easy {
+.create-recipe-difficulty-easy .create-recipe-difficulty-input:checked + .create-recipe-difficulty-label {
   background: #ecfdf5;
   border-color: #bbf7d0;
   color: #16a34a;
 }
 
-.create-recipe-difficulty.active.create-recipe-difficulty-medium {
+.create-recipe-difficulty-medium .create-recipe-difficulty-input:checked + .create-recipe-difficulty-label {
   background: #fffbeb;
   border-color: #fde68a;
   color: #d97706;
 }
 
-.create-recipe-difficulty.active.create-recipe-difficulty-advanced {
+.create-recipe-difficulty-advanced .create-recipe-difficulty-input:checked + .create-recipe-difficulty-label {
   background: #fef2f2;
   border-color: #fecaca;
   color: #dc2626;

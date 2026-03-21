@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ImagePlus, Plus, Trash2, X } from "lucide-react";
 import { recipeService } from "../services/recipeService";
@@ -16,6 +16,7 @@ const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 const hourOptions = Array.from({ length: 13 }, (_, index) => index);
 const minuteOptions = Array.from({ length: 12 }, (_, index) => index * 5);
+const difficultyOptions: Difficulty[] = ["Easy", "Medium", "Advanced"];
 
 const formatCookDuration = (hours: number, minutes: number): string => {
   const segments: string[] = [];
@@ -39,14 +40,8 @@ function CreateRecipe({ token }: CreateRecipeProps) {
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string>("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState<string[]>([defaultIngredient]);
   const [instructions, setInstructions] = useState<string[]>([defaultInstruction]);
-  const [cookHours, setCookHours] = useState("0");
-  const [cookMinutes, setCookMinutes] = useState("25");
-  const [servings, setServings] = useState("");
-  const [difficulty, setDifficulty] = useState<Difficulty>("Easy");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -58,20 +53,10 @@ function CreateRecipe({ token }: CreateRecipeProps) {
     };
   }, [imagePreviewUrl]);
 
-  const canSubmit = useMemo(() => {
-    const hasCookDuration = Number(cookHours) > 0 || Number(cookMinutes) > 0;
-
-    return (
-      !isSubmitting
-      && !!imageFile
-      && title.trim().length > 0
-      && description.trim().length > 0
-      && ingredients.some((item) => item.trim().length > 0)
-      && instructions.some((item) => item.trim().length > 0)
-      && hasCookDuration
-      && Number(servings) > 0
-    );
-  }, [cookHours, cookMinutes, description, imageFile, ingredients, instructions, isSubmitting, servings, title]);
+  const canSubmit = !isSubmitting
+    && !!imageFile
+    && ingredients.some((item) => item.trim().length > 0)
+    && instructions.some((item) => item.trim().length > 0);
 
   const resetImageInput = () => {
     if (imageInputRef.current) {
@@ -140,10 +125,23 @@ function CreateRecipe({ token }: CreateRecipeProps) {
     resetImageInput();
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
     if (!canSubmit || !imageFile) {
       return;
     }
+
+    const formData = new FormData(event.currentTarget);
+    const title = String(formData.get("title") ?? "").trim();
+    const description = String(formData.get("description") ?? "").trim();
+    const cookHours = Number(formData.get("cookHours") ?? "0");
+    const cookMinutes = Number(formData.get("cookMinutes") ?? "0");
+    const servings = Number(formData.get("servings") ?? "0");
+    const difficultyRaw = String(formData.get("difficulty") ?? "Easy");
+    const difficulty: Difficulty = difficultyOptions.includes(difficultyRaw as Difficulty)
+      ? (difficultyRaw as Difficulty)
+      : "Easy";
 
     setError("");
     setIsSubmitting(true);
@@ -156,8 +154,8 @@ function CreateRecipe({ token }: CreateRecipeProps) {
           description,
           ingredients: ingredients.map((item) => item.trim()).filter(Boolean),
           instructions: instructions.map((item) => item.trim()).filter(Boolean),
-          cookTime: formatCookDuration(Number(cookHours), Number(cookMinutes)),
-          servings: Number(servings),
+          cookTime: formatCookDuration(cookHours, cookMinutes),
+          servings,
           difficulty,
         },
         token,
@@ -172,7 +170,7 @@ function CreateRecipe({ token }: CreateRecipeProps) {
   };
 
   return (
-    <div className="create-recipe-page">
+    <form className="create-recipe-page" onSubmit={(event) => void handleSubmit(event)}>
       <div className="create-recipe-header">
         <div>
           <h1>New Recipe</h1>
@@ -181,10 +179,9 @@ function CreateRecipe({ token }: CreateRecipeProps) {
         <div className="create-recipe-header-actions">
           <button type="button" className="create-recipe-cancel" onClick={() => navigate("/feed")}>Cancel</button>
           <button
-            type="button"
+            type="submit"
             className="create-recipe-publish"
             disabled={!canSubmit}
-            onClick={() => void handleSubmit()}
           >
             {isSubmitting ? (
               <>
@@ -232,21 +229,21 @@ function CreateRecipe({ token }: CreateRecipeProps) {
             <label className="create-recipe-label" htmlFor="title">Title</label>
             <input
               id="title"
+              name="title"
               type="text"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
               placeholder="e.g., Classic Margherita Pizza"
               className="create-recipe-input"
+              required
             />
 
             <label className="create-recipe-label" htmlFor="description">Description</label>
             <textarea
               id="description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              name="description"
               rows={3}
               placeholder="A short, enticing description of the dish..."
               className="create-recipe-textarea"
+              required
             />
           </section>
 
@@ -310,8 +307,8 @@ function CreateRecipe({ token }: CreateRecipeProps) {
             <label className="create-recipe-sidebar-label" htmlFor="cook-time">Cook Time</label>
             <div id="cook-time" className="create-recipe-duration-row" role="group" aria-label="Cook duration picker">
               <select
-                value={cookHours}
-                onChange={(event) => setCookHours(event.target.value)}
+                name="cookHours"
+                defaultValue="0"
                 className="create-recipe-sidebar-input create-recipe-duration-input"
               >
                 {hourOptions.map((hour) => (
@@ -319,8 +316,8 @@ function CreateRecipe({ token }: CreateRecipeProps) {
                 ))}
               </select>
               <select
-                value={cookMinutes}
-                onChange={(event) => setCookMinutes(event.target.value)}
+                name="cookMinutes"
+                defaultValue="25"
                 className="create-recipe-sidebar-input create-recipe-duration-input"
               >
                 {minuteOptions.map((minute) => (
@@ -332,25 +329,28 @@ function CreateRecipe({ token }: CreateRecipeProps) {
             <label className="create-recipe-sidebar-label" htmlFor="servings">Servings</label>
             <input
               id="servings"
+              name="servings"
               type="number"
               min={1}
-              value={servings}
-              onChange={(event) => setServings(event.target.value)}
               placeholder="e.g., 4"
               className="create-recipe-sidebar-input"
+              required
             />
 
             <label className="create-recipe-sidebar-label">Difficulty</label>
             <div className="create-recipe-difficulty-grid">
-              {(["Easy", "Medium", "Advanced"] as const).map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  className={`create-recipe-difficulty create-recipe-difficulty-${level.toLowerCase()} ${difficulty === level ? "active" : ""}`}
-                  onClick={() => setDifficulty(level)}
-                >
-                  {level}
-                </button>
+              {difficultyOptions.map((level) => (
+                <label key={level} className={`create-recipe-difficulty create-recipe-difficulty-${level.toLowerCase()}`}>
+                  <input
+                    type="radio"
+                    name="difficulty"
+                    value={level}
+                    defaultChecked={level === "Easy"}
+                    className="create-recipe-difficulty-input"
+                    required
+                  />
+                  <span className="create-recipe-difficulty-label">{level}</span>
+                </label>
               ))}
             </div>
 
@@ -361,10 +361,9 @@ function CreateRecipe({ token }: CreateRecipeProps) {
             ) : null}
 
             <button
-              type="button"
+              type="submit"
               className="create-recipe-sidebar-publish"
               disabled={!canSubmit}
-              onClick={() => void handleSubmit()}
             >
               {isSubmitting ? (
                 <>
@@ -376,7 +375,7 @@ function CreateRecipe({ token }: CreateRecipeProps) {
           </section>
         </aside>
       </div>
-    </div>
+    </form>
   );
 }
 
