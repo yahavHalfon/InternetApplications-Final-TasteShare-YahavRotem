@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
+import { Navigate, Route, Routes } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,6 +18,7 @@ import {
 import { GOOGLE_CLIENT_ID } from "./config/env";
 import { authService, type AuthSession } from "./services/authService";
 import Feed from "./pages/Feed";
+import Navbar from "./components/Navbar";
 import "./App.css";
 
 type AuthMode = "login" | "register";
@@ -40,6 +42,28 @@ const normalizeUsername = (value: string): string => {
     .slice(0, 30);
 };
 
+const authRoutes = [
+  {
+    path: "/feed",
+    title: "Feed",
+    description: "Your personalized recipe stream is ready.",
+  },
+  {
+    path: "/search",
+    title: "AI Search",
+    description: "Find recipes with smart ingredient and cuisine matching.",
+  },
+  {
+    path: "/create",
+    title: "Add Post",
+    description: "Share your next recipe with the TasteShare community.",
+  },
+  {
+    path: "/profile",
+    title: "Profile",
+    description: "Manage your profile details and personal cooking identity.",
+  },
+] as const;
 function App() {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [registerStep, setRegisterStep] = useState<RegisterStep>(1);
@@ -292,7 +316,37 @@ function App() {
   }
 
   if (session) {
-    return <Feed onLogout={handleLogout} />;
+    return (
+      <div className="app-shell">
+        <Navbar onLogout={() => void handleLogout()} />
+
+        <main className="app-content">
+          {notification ? (
+            <div className={`notification notification-${notification.type}`}>{notification.message}</div>
+          ) : null}
+
+          <Routes>
+            {authRoutes.map((route) => (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={
+                  route.path === "/feed" ? (
+                    <Feed />
+                  ) : (
+                    <section className="app-view-card">
+                      <h1>{route.title}</h1>
+                      <p>{route.description}</p>
+                    </section>
+                  )
+                }
+              />
+            ))}
+            <Route path="*" element={<Navigate to="/feed" replace />} />
+          </Routes>
+        </main>
+      </div>
+    );
   }
 
   const isRegisterStepTwo = authMode === "register" && registerStep === 2;
