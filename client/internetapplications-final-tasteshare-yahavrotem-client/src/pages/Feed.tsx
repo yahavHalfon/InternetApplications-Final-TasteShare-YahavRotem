@@ -4,23 +4,41 @@ import RecipeCard from "../components/RecipeCard";
 import type { RecipeFeedItem } from "../types/recipe";
 import { recipeService } from "../services/recipeService";
 import { userService } from "../services/userService";
+import { API_BASE_URL } from "../config/env";
 
 const PAGE_SIZE = 9;
 
+type FeedUserView = {
+  username: string;
+  profileImage?: string;
+};
+
+const toApiAssetUrl = (assetPath?: string): string | undefined => {
+  if (!assetPath) {
+    return undefined;
+  }
+  return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
+};
+
 const Feed: React.FC = () => {
   const [recipes, setRecipes] = useState<RecipeFeedItem[]>([]);
-  const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
+  const [usersById, setUsersById] = useState<Record<string, FeedUserView>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pageRef = useRef(1);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const usernamesCacheRef = useRef<Record<string, string>>({});
+  const usersCacheRef = useRef<Record<string, FeedUserView>>({});
 
-  const resolveUsernames = useCallback(async (userIds: string[]) => {
+  const getRecipeUser = (userId: string) => ({
+    _id: userId,
+    ...(usersById[userId] ?? { username: "Unknown User" }),
+  });
+
+  const resolveUsers = useCallback(async (userIds: string[]) => {
     const uniqueIds = Array.from(new Set(userIds));
-    const missingIds = uniqueIds.filter((id) => !usernamesCacheRef.current[id]);
+    const missingIds = uniqueIds.filter((id) => !usersCacheRef.current[id]);
 
     if (missingIds.length === 0) {
       return;
@@ -29,23 +47,30 @@ const Feed: React.FC = () => {
     const results = await Promise.allSettled(
       missingIds.map(async (id) => {
         const user = await userService.getUserById(id);
-        const username = user?.username?.trim();
+        const name = user?.name?.trim();
+        const displayName = name && name.length > 0 ? name : "Unknown User";
         return {
           id,
-          username: username && username.length > 0 ? username : "Unknown User",
+          user: {
+            username: displayName,
+            profileImage: toApiAssetUrl(user?.avatarUrl),
+          },
         };
       }),
     );
 
-    const updates: Record<string, string> = {};
+    const updates: Record<string, FeedUserView> = {};
 
     results.forEach((result, index) => {
       const id = missingIds[index];
-      updates[id] = result.status === "fulfilled" ? result.value.username : "Unknown User";
+      updates[id] =
+        result.status === "fulfilled"
+          ? result.value.user
+          : { username: "Unknown User" };
     });
 
-    usernamesCacheRef.current = { ...usernamesCacheRef.current, ...updates };
-    setUsernamesById((prev) => ({ ...prev, ...updates }));
+    usersCacheRef.current = { ...usersCacheRef.current, ...updates };
+    setUsersById((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const loadRecipes = useCallback(async (page: number, append: boolean) => {
@@ -73,7 +98,7 @@ const Feed: React.FC = () => {
         difficulty: recipe.difficulty,
       }));
 
-      await resolveUsernames(mappedRecipes.map((recipe) => recipe.userID));
+      await resolveUsers(mappedRecipes.map((recipe) => recipe.userID));
 
       setRecipes((prev) => (append ? [...prev, ...mappedRecipes] : mappedRecipes));
       setHasMore(response.hasMore);
@@ -85,7 +110,7 @@ const Feed: React.FC = () => {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [resolveUsernames]);
+  }, [resolveUsers]);
 
   useEffect(() => {
     void loadRecipes(1, false);
@@ -147,10 +172,7 @@ const Feed: React.FC = () => {
           <RecipeCard
             key={recipe._id}
             recipe={recipe}
-            user={{
-              _id: recipe.userID,
-              username: usernamesById[recipe.userID] ?? "Unknown User",
-            }}
+            user={getRecipeUser(recipe.userID)}
           />
         ))}
       </Box>
