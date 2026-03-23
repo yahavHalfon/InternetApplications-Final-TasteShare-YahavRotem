@@ -78,10 +78,21 @@ class RecipeController extends BaseController<IRecipe> {
         const skip = (page - 1) * limit;
 
         try {
-            const [total, data] = await Promise.all([
+            const [total, recipes] = await Promise.all([
                 Recipe.countDocuments({}),
                 Recipe.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit),
             ]);
+
+            // Fetch comment counts for each recipe
+            const data = await Promise.all(
+                recipes.map(async (recipe) => {
+                    const commentsCount = await CommentModel.countDocuments({ recipeId: recipe._id });
+                    return {
+                        ...recipe.toObject(),
+                        commentsCount,
+                    };
+                })
+            );
 
             return res.status(200).json({
                 data,
