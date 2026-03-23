@@ -35,7 +35,7 @@ function MainLayout({ session, notification, onLogout, onProfileUpdated }: MainL
             path="/recipes/:id"
             element={(
               <Suspense fallback={routeLoadingFallback}>
-                <RecipeDetailRoute token={session.token} userId={session.user.id} />
+                <RecipeDetailRoute />
               </Suspense>
             )}
           />

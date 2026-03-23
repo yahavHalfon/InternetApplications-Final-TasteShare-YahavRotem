@@ -3,12 +3,7 @@ import { Navigate, useParams } from "react-router-dom";
 
 const RecipeDetailScreen = lazy(() => import("../pages/RecipeDetailScreen"));
 
-type RecipeDetailRouteProps = {
-  token?: string;
-  userId?: string;
-};
-
-export function RecipeDetailRoute({ token, userId }: RecipeDetailRouteProps) {
+export function RecipeDetailRoute() {
   const params = useParams();
   const recipeId = params.id;
 
@@ -16,5 +11,5 @@ export function RecipeDetailRoute({ token, userId }: RecipeDetailRouteProps) {
     return <Navigate to="/recipes" replace />;
   }
 
-  return <RecipeDetailScreen recipeId={recipeId} token={token} userId={userId} />;
+  return <RecipeDetailScreen recipeId={recipeId} />;
 }
