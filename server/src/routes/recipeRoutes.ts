@@ -31,6 +31,31 @@ router.get("/", recipeController.get.bind(recipeController));
 
 /**
  * @swagger
+ * /recipes/me:
+ *   get:
+ *     summary: Returns recipes created by the authenticated user
+ *     tags: [Recipes]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: The authenticated user's recipes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Recipe'
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/me", authMiddleware, recipeController.getMyRecipes.bind(recipeController));
+
+/**
+ * @swagger
  * /recipes/{id}:
  *   get:
  *     summary: Get the recipe by id

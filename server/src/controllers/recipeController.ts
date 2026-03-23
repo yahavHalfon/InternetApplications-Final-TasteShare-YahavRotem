@@ -140,6 +140,20 @@ class RecipeController extends BaseController<IRecipe> {
         }
     }
 
+    async getMyRecipes(req: AuthRequest, res: Response) {
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        try {
+            const data = await Recipe.find({ userId }).sort({ createdAt: -1 });
+            return res.status(200).json({ data });
+        } catch (error) {
+            return this.handleError(res, error);
+        }
+    }
+
     async create(req: AuthRequest, res: Response) {
         const userId = req.user?._id;
         if (!userId) {
