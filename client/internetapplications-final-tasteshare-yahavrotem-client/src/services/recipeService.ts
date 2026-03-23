@@ -7,6 +7,7 @@ export type ApiRecipe = {
   title: string;
   description: string;
   likedBy?: string[];
+  commentsCount?: number;
   cookTime: string;
   difficulty: "Easy" | "Medium" | "Advanced";
   createdAt: string;

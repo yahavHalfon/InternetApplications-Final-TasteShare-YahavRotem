@@ -171,7 +171,7 @@ const CreatePostScreen = ({ token }: CreatePostScreenProps) => {
         token,
       );
 
-      navigate("/feed");
+      navigate("/recipes");
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Failed to create recipe.");
     } finally {
@@ -193,7 +193,7 @@ const CreatePostScreen = ({ token }: CreatePostScreenProps) => {
         <Stack direction="row" spacing={1.5}>
           <Button
             variant="outlined"
-            onClick={() => navigate("/feed")}
+            onClick={() => navigate("/recipes")}
             sx={{ height: 40, color: "text.secondary", borderColor: "grey.300" }}
           >
             Cancel

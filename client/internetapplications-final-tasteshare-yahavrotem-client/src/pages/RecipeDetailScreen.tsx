@@ -9,12 +9,12 @@ import {
 } from "@mui/icons-material";
 import { API_BASE_URL } from "../config/env";
 import { recipeService, type ApiRecipeDetails } from "../services/recipeService";
+import RecipeComments from "../components/RecipeComments";
+import { useAuth } from "../context/useAuth";
+import { getUserIdFromToken } from "../utils/jwt";
 
 type RecipeDetailScreenProps = {
   recipeId: string;
-  token?: string;
-  userId?: string;
-  onLikeChange?: (recipeId: string, likedBy: string[]) => void;
 };
 
 const toApiAssetUrl = (assetPath?: string): string | undefined => {
@@ -24,13 +24,16 @@ const toApiAssetUrl = (assetPath?: string): string | undefined => {
   return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
 };
 
-const RecipeDetailScreen = ({ recipeId, token, userId, onLikeChange }: RecipeDetailScreenProps) => {
+const RecipeDetailScreen = ({ recipeId, onLikeChange }: RecipeDetailScreenProps & { onLikeChange?: (recipeId: string, likedBy: string[]) => void }) => {
+  const { accessToken } = useAuth();
+  const userId = accessToken ? (getUserIdFromToken(accessToken) ?? undefined) : undefined;
   const [recipe, setRecipe] = useState<ApiRecipeDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLiking, setIsLiking] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isLikedByUser, setIsLikedByUser] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(0);
 
   useEffect(() => {
     const loadRecipe = async () => {
@@ -47,7 +50,8 @@ const RecipeDetailScreen = ({ recipeId, token, userId, onLikeChange }: RecipeDet
           },
         });
         setLikesCount(data.stats.likesCount);
-        setIsLikedByUser(userId ? data.likedBy?.includes(userId) ?? false : false);
+        setCommentsCount(data.stats.commentsCount);
+        setIsLikedByUser(userId ? (data.likedBy?.includes(userId) ?? false) : false);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Failed to load recipe details.");
       } finally {
@@ -59,17 +63,17 @@ const RecipeDetailScreen = ({ recipeId, token, userId, onLikeChange }: RecipeDet
   }, [recipeId, userId]);
 
   const handleLikeClick = async () => {
-    if (!userId || !token || isLiking) {
+    if (!accessToken || isLiking) {
       return;
     }
 
     setIsLiking(true);
     try {
-      const updatedRecipe = await recipeService.toggleLike(recipeId, token);
+      const updatedRecipe = await recipeService.toggleLike(recipeId, accessToken);
       const newLikedBy = updatedRecipe.likedBy || [];
-      setIsLikedByUser(newLikedBy.includes(userId));
+      setIsLikedByUser(userId ? newLikedBy.includes(userId) : false);
       setLikesCount(newLikedBy.length);
-      onLikeChange?.(recipeId, newLikedBy);
+      onLikeChange?.(recipeId, updatedRecipe.likedBy || []);
     } catch (error) {
       console.error("Failed to toggle like:", error);
     } finally {
@@ -145,7 +149,7 @@ const RecipeDetailScreen = ({ recipeId, token, userId, onLikeChange }: RecipeDet
                 display: "flex",
                 alignItems: "center",
                 gap: 0.75,
-                cursor: userId && token ? "pointer" : "default",
+                cursor: accessToken ? "pointer" : "default",
                 opacity: isLiking ? 0.6 : 1,
                 transition: "opacity 0.2s",
               }}
@@ -159,7 +163,7 @@ const RecipeDetailScreen = ({ recipeId, token, userId, onLikeChange }: RecipeDet
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
               <ChatBubbleOutline sx={{ fontSize: 17 }} />
-              <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{recipe.stats.commentsCount}</Typography>
+              <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{commentsCount}</Typography>
             </Box>
           </Box>
 
@@ -220,6 +224,15 @@ const RecipeDetailScreen = ({ recipeId, token, userId, onLikeChange }: RecipeDet
           </Box>
         </Paper>
       </Box>
+
+      <Paper variant="outlined" sx={{ mt: 2.5, p: { xs: 2, md: 2.5 }, borderRadius: 3, borderColor: "grey.200" }}>
+        <RecipeComments
+          recipeId={recipeId}
+          token={accessToken ?? undefined}
+          userId={userId}
+          onCountChange={setCommentsCount}
+        />
+      </Paper>
     </Box>
   );
 };

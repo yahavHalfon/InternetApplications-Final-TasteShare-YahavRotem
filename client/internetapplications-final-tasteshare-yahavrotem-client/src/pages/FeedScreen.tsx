@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Typography, CircularProgress, Grid } from "@mui/material";
 import dayjs from "dayjs";
 import RecipeCard from "../components/RecipeCard";
-import RecipeDetailModal from "../components/RecipeDetailModal";
 import type { RecipeFeedItem } from "../types/recipe";
 import { API_BASE_URL } from "../config/env";
 import { recipeService } from "../services/recipeService";
@@ -28,14 +28,13 @@ type FeedScreenProps = {
 };
 
 const FeedScreen = ({ token, userId }: FeedScreenProps) => {
+  const navigate = useNavigate();
   const [recipes, setRecipes] = useState<RecipeFeedItem[]>([]);
   const [usersById, setUsersById] = useState<Record<string, FeedUserView>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<RecipeFeedItem | null>(null);
   const pageRef = useRef(1);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const usersCacheRef = useRef<Record<string, FeedUserView>>({});
@@ -46,21 +45,15 @@ const FeedScreen = ({ token, userId }: FeedScreenProps) => {
   });
 
   const handleRecipeClick = (recipeId: string) => {
-    const clickedRecipe = recipes.find((recipe) => recipe._id === recipeId) ?? null;
-    setSelectedRecipe(clickedRecipe);
-    setIsModalOpen(true);
+    navigate(`/recipes/${recipeId}`);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedRecipe(null);
+  const updateRecipeState = (recipeId: string, updater: (recipe: RecipeFeedItem) => RecipeFeedItem) => {
+    setRecipes((prev) => prev.map((r) => (r._id === recipeId ? updater(r) : r)));
   };
 
   const handleRecipeLikeChange = (recipeId: string, likedBy: string[]) => {
-    setRecipes((prev) =>
-      prev.map((r) => (r._id === recipeId ? { ...r, likedBy, likesCount: likedBy.length } : r))
-    );
-    setSelectedRecipe((prev) => (prev && prev._id === recipeId ? { ...prev, likedBy, likesCount: likedBy.length } : prev));
+    updateRecipeState(recipeId, (recipe) => ({ ...recipe, likedBy, likesCount: likedBy.length }));
   };
 
   const resolveUsers = useCallback(async (userIds: string[]) => {
@@ -121,7 +114,7 @@ const FeedScreen = ({ token, userId }: FeedScreenProps) => {
         createdAt: dayjs(recipe.createdAt).format("DD/MM/YYYY"),
         likesCount: recipe.likedBy?.length ?? 0,
         likedBy: recipe.likedBy ?? [],
-        commentsCount: 0,
+        commentsCount: recipe.commentsCount ?? 0,
         cookTime: recipe.cookTime,
         difficulty: recipe.difficulty,
       }));
@@ -213,17 +206,6 @@ const FeedScreen = ({ token, userId }: FeedScreenProps) => {
       ) : null}
 
       <Box ref={loadMoreRef} sx={{ height: 1 }} />
-
-      {selectedRecipe && (
-        <RecipeDetailModal
-          recipe={selectedRecipe}
-          open={isModalOpen}
-          onClose={handleCloseModal}
-          token={token}
-          userId={userId}
-          onLikeChange={handleRecipeLikeChange}
-        />
-      )}
     </Box>
   );
 };

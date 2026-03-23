@@ -82,6 +82,43 @@ describe("Comment Tests", () => {
         commentId = response.body._id;
     });
 
+    test("Create Recipe Comment (Recipe Route) - Success", async () => {
+        const response = await request(app)
+            .post(`/recipes/${recipeId}/comments`)
+            .set("Authorization", "Bearer " + accessToken)
+            .send({
+                text: "Comment through recipe route",
+            });
+
+        expect(response.statusCode).toBe(201);
+        expect(response.body.recipeId).toBe(recipeId);
+        expect(response.body.text).toBe("Comment through recipe route");
+        expect(response.body.author).toBeDefined();
+        expect(typeof response.body.author.name).toBe("string");
+        expect(typeof response.body.createdAt).toBe("string");
+    });
+
+    test("Create Recipe Comment (Recipe Route) - Fail (No Auth)", async () => {
+        const response = await request(app)
+            .post(`/recipes/${recipeId}/comments`)
+            .send({
+                text: "No auth",
+            });
+
+        expect(response.statusCode).toBe(401);
+    });
+
+    test("Get Recipe Comments (Recipe Route) - Success", async () => {
+        const response = await request(app).get(`/recipes/${recipeId}/comments`);
+
+        expect(response.statusCode).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body.length).toBeGreaterThan(0);
+        expect(response.body[0].author).toBeDefined();
+        expect(typeof response.body[0].author.name).toBe("string");
+        expect(typeof response.body[0].createdAt).toBe("string");
+    });
+
     test("Create Comment - Fail (No Auth)", async () => {
         const response = await request(app).post("/comments").send({
             recipeId: recipeId,

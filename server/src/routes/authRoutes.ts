@@ -39,6 +39,10 @@ const router = express.Router();
  *     responses:
  *       201:
  *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthSession'
  *       400:
  *         description: User already exists or invalid input
  */
@@ -71,12 +75,7 @@ router.post("/register", uploadProfileImage.single("profileImage"), authControll
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 token:
- *                   type: string
- *                 refreshToken:
- *                   type: string
+ *               $ref: '#/components/schemas/AuthSession'
  *       400:
  *         description: Invalid credentials
  */
@@ -102,6 +101,10 @@ router.post("/login", authController.login);
  *     responses:
  *       200:
  *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthSession'
  *       400:
  *         description: Invalid request
  *       401:
@@ -156,6 +159,10 @@ router.post("/logout", authMiddleware, authController.logout);
  *     responses:
  *       200:
  *         description: Token refreshed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthSession'
  *       401:
  *         description: Invalid refresh token
  */
