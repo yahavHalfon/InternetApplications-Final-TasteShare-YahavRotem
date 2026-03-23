@@ -250,6 +250,38 @@ curl -X DELETE http://localhost:3000/recipes/<RECIPE_ID> \
 
 ### Comments
 
+#### Get recipe comments
+
+**URL** : `/recipes/:id/comments`
+**Method** : `GET`
+
+**Curl Example** :
+```bash
+curl http://localhost:3000/recipes/<RECIPE_ID>/comments
+```
+
+#### Create recipe comment
+
+**URL** : `/recipes/:id/comments`
+**Method** : `POST`
+**Headers** : `Authorization: Bearer <token>`
+**Body** :
+```json
+{
+    "text": "Looks delicious!"
+}
+```
+
+**Curl Example** :
+```bash
+curl -X POST http://localhost:3000/recipes/<RECIPE_ID>/comments \
+-H "Authorization: Bearer <token>" \
+-H "Content-Type: application/json" \
+-d '{
+    "text": "Looks delicious!"
+}'
+```
+
 #### Get all comments
 
 **URL** : `/comments`
@@ -258,16 +290,6 @@ curl -X DELETE http://localhost:3000/recipes/<RECIPE_ID> \
 **Curl Example** :
 ```bash
 curl http://localhost:3000/comments
-```
-
-#### Get comments by post
-
-**URL** : `/comments?postId=<POST_ID>`
-**Method** : `GET`
-
-**Curl Example** :
-```bash
-curl "http://localhost:3000/comments?postId=<POST_ID>"
 ```
 
 #### Get a comment by ID
@@ -288,8 +310,8 @@ curl http://localhost:3000/comments/<COMMENT_ID>
 **Body** :
 ```json
 {
-    "postId": "PostID",
-    "message": "Comment content"
+    "recipeId": "<RECIPE_ID>",
+    "text": "Comment content"
 }
 ```
 
@@ -299,8 +321,8 @@ curl -X POST http://localhost:3000/comments \
 -H "Authorization: Bearer <token>" \
 -H "Content-Type: application/json" \
 -d '{
-    "postId": "<POST_ID>",
-    "message": "Comment content"
+    "recipeId": "<RECIPE_ID>",
+    "text": "Comment content"
 }'
 ```
 
@@ -312,7 +334,7 @@ curl -X POST http://localhost:3000/comments \
 **Body** :
 ```json
 {
-    "message": "Updated Comment Content"
+    "text": "Updated Comment Content"
 }
 ```
 
@@ -322,7 +344,7 @@ curl -X PUT http://localhost:3000/comments/<COMMENT_ID> \
 -H "Authorization: Bearer <token>" \
 -H "Content-Type: application/json" \
 -d '{
-    "message": "Updated Comment Content"
+    "text": "Updated Comment Content"
 }'
 ```
 
