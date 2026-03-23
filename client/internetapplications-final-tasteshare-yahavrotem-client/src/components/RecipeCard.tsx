@@ -76,7 +76,7 @@ const RecipeCard = ({
         "&:hover img": { transform: "scale(1.03)" },
       }}
     >
-      {!!recipe.image && (
+      {recipe.image && (
         <Box sx={{ position: "relative", aspectRatio: "16/10", overflow: "hidden", bgcolor: "grey.100" }}>
           <CardMedia
             component="img"
@@ -86,7 +86,7 @@ const RecipeCard = ({
             sx={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s" }}
           />
           <Stack direction="row" spacing={0.75} sx={{ position: "absolute", top: 12, right: 12 }}>
-            {!!recipe.cookTime && (
+            {recipe.cookTime && (
               <Chip
                 icon={<AccessTime sx={{ fontSize: 12 }} />}
                 label={recipe.cookTime}
@@ -99,7 +99,7 @@ const RecipeCard = ({
                 }}
               />
             )}
-            {!!recipe.difficulty && (
+            {recipe.difficulty && (
               <Chip
                 label={recipe.difficulty}
                 size="small"
@@ -131,7 +131,7 @@ const RecipeCard = ({
           </Typography>
         </Stack>
 
-        {!!recipe.title && (
+        {recipe.title && (
           <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5, fontSize: 15 }}>
             {recipe.title}
           </Typography>
