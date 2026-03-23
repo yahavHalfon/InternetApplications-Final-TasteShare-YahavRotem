@@ -8,7 +8,8 @@ let app: Express;
 
 const testUser = {
     email: "test@auth.com",
-    password: "password123"
+    password: "password123",
+    username: "testauthuser"
 };
 
 beforeAll(async () => {
@@ -35,11 +36,41 @@ describe("Auth Routes Tests", () => {
         expect(response.statusCode).toBe(409);
     });
 
+    test("Register User - Fail (Username already exists)", async () => {
+        const firstUser = {
+            email: "dupusername1@auth.com",
+            password: "password123",
+            username: "sameusername",
+        };
+
+        const secondUser = {
+            email: "dupusername2@auth.com",
+            password: "password123",
+            username: "sameusername",
+        };
+
+        const firstResponse = await request(app).post("/auth/register").send(firstUser);
+        expect(firstResponse.statusCode).toBe(201);
+
+        const secondResponse = await request(app).post("/auth/register").send(secondUser);
+        expect(secondResponse.statusCode).toBe(409);
+        expect(secondResponse.body.error).toBe("Username already exists");
+    });
+
     test("Register User - Fail (Missing fields)", async () => {
         const response = await request(app).post("/auth/register").send({
             email: "missing@password.com"
         });
         expect(response.statusCode).toBe(400);
+    });
+
+    test("Register User - Fail (Missing username)", async () => {
+        const response = await request(app).post("/auth/register").send({
+            email: "nousername@auth.com",
+            password: "password123"
+        });
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Username is required");
     });
 
     test("Login User - Success", async () => {
@@ -246,6 +277,36 @@ describe("Auth Routes Tests", () => {
         }
     });
 
+    test("Update Profile - Fail (Username already exists)", async () => {
+        const firstUser = {
+            email: "profilefirst@auth.com",
+            password: "password123",
+            username: "profilefirst",
+        };
+
+        const secondUser = {
+            email: "profilesecond@auth.com",
+            password: "password123",
+            username: "profilesecond",
+        };
+
+        await request(app).post("/auth/register").send(firstUser);
+        await request(app).post("/auth/register").send(secondUser);
+
+        const secondLogin = await request(app).post("/auth/login").send({
+            email: secondUser.email,
+            password: secondUser.password,
+        });
+
+        const response = await request(app)
+            .put("/users/profile")
+            .set("Authorization", "Bearer " + secondLogin.body.token)
+            .send({ username: firstUser.username });
+
+        expect(response.statusCode).toBe(409);
+        expect(response.body.error).toBe("Username already exists");
+    });
+
     test("Auth Middleware - Fail (No Authorization Header)", async () => {
         const response = await request(app).post("/recipes").send({ title: "t", description: "d" });
         expect(response.statusCode).toBe(401);
@@ -259,7 +320,7 @@ describe("Auth Routes Tests", () => {
     });
 
     test("Auth Middleware - Fail (User Deleted)", async () => {
-        const tempUser = { email: "deleted@test.com", password: "123" };
+        const tempUser = { email: "deleted@test.com", password: "password123", username: "deleteduser" };
         await request(app).post("/auth/register").send(tempUser);
         const loginRes = await request(app).post("/auth/login").send(tempUser);
         const accessToken = loginRes.body.token;
