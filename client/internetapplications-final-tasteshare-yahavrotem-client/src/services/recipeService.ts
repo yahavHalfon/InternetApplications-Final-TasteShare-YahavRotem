@@ -6,9 +6,12 @@ export type ApiRecipe = {
   image: string;
   title: string;
   description: string;
+  ingredients?: string[];
+  instructions?: string[];
   likedBy?: string[];
   commentsCount?: number;
   cookTime: string;
+  servings?: number;
   difficulty: "Easy" | "Medium" | "Advanced";
   createdAt: string;
 };
@@ -58,6 +61,17 @@ export type CreateRecipePayload = {
   cookTime: string;
   servings: number;
   difficulty: "Easy" | "Medium" | "Advanced";
+};
+
+export type UpdateRecipePayload = {
+  image?: string;
+  title?: string;
+  description?: string;
+  ingredients?: string[];
+  instructions?: string[];
+  cookTime?: string;
+  servings?: number;
+  difficulty?: "Easy" | "Medium" | "Advanced";
 };
 
 const getRecipes = async (page: number, limit: number): Promise<PaginatedRecipesResponse> => {
@@ -133,6 +147,38 @@ export const recipeService = {
     return (await response.json()) as UserRecipesResponse;
   },
   createRecipe,
+  updateRecipe: async (recipeId: string, payload: UpdateRecipePayload, token: string): Promise<ApiRecipe> => {
+    const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const fallbackMessage = "Failed to update recipe.";
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error || fallbackMessage);
+    }
+
+    return (await response.json()) as ApiRecipe;
+  },
+  deleteRecipe: async (recipeId: string, token: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const fallbackMessage = "Failed to delete recipe.";
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error || fallbackMessage);
+    }
+  },
   toggleLike: async (recipeId: string, token: string): Promise<ApiRecipe> => {
     const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}/like`, {
       method: "POST",

@@ -3,15 +3,18 @@ import {
   Box,
   CircularProgress,
   Grid,
+  IconButton,
   Paper,
   Stack,
   Tab,
   Tabs,
   Typography,
 } from "@mui/material";
-import { GridView, Restaurant } from "@mui/icons-material";
+import { Delete, Edit, GridView, Restaurant } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/env";
 import { recipeService, type ApiRecipe } from "../services/recipeService";
+import RecipeManagementModal from "./RecipeManagementModal";
 
 type MyRecipesSectionProps = {
   token: string;
@@ -25,9 +28,12 @@ const toApiAssetUrl = (assetPath?: string): string => {
 };
 
 function MyRecipesSection({ token }: MyRecipesSectionProps) {
+  const navigate = useNavigate();
   const [recipes, setRecipes] = useState<ApiRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingRecipe, setEditingRecipe] = useState<ApiRecipe | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<ApiRecipe | null>(null);
 
   useEffect(() => {
     const loadMyRecipes = async () => {
@@ -46,6 +52,18 @@ function MyRecipesSection({ token }: MyRecipesSectionProps) {
 
     void loadMyRecipes();
   }, [token]);
+
+  const handleRecipeClick = (recipeId: string) => {
+    navigate(`/recipes/${recipeId}`);
+  };
+
+  const handleRecipeUpdated = (updatedRecipe: ApiRecipe) => {
+    setRecipes((prev) => prev.map((recipe) => (recipe._id === updatedRecipe._id ? { ...recipe, ...updatedRecipe } : recipe)));
+  };
+
+  const handleRecipeDeleted = (recipeId: string) => {
+    setRecipes((prev) => prev.filter((recipe) => recipe._id !== recipeId));
+  };
 
   return (
     <Paper
@@ -108,12 +126,14 @@ function MyRecipesSection({ token }: MyRecipesSectionProps) {
             {recipes.map((recipe) => (
               <Grid key={recipe._id} size={{ xs: 6, md: 4, lg: 3 }}>
                 <Box
+                  onClick={() => handleRecipeClick(recipe._id)}
                   sx={{
                     position: "relative",
                     aspectRatio: "1",
                     borderRadius: 3,
                     overflow: "hidden",
                     bgcolor: "grey.100",
+                    cursor: "pointer",
                     "&:hover [data-slot='tile-overlay']": { opacity: 1 },
                     "&:hover [data-slot='tile-image']": { transform: "scale(1.05)" },
                   }}
@@ -140,10 +160,45 @@ function MyRecipesSection({ token }: MyRecipesSectionProps) {
                       opacity: 0,
                       transition: "opacity 0.2s",
                       display: "flex",
-                      alignItems: "flex-end",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
                       p: 1.5,
                     }}
                   >
+                    <Stack direction="row" justifyContent="flex-end" spacing={0.75}>
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditingRecipe(recipe);
+                        }}
+                        sx={{
+                          bgcolor: "rgba(255,255,255,0.9)",
+                          backdropFilter: "blur(4px)",
+                          width: 32,
+                          height: 32,
+                          "&:hover": { bgcolor: "white", color: "info.main" },
+                        }}
+                      >
+                        <Edit sx={{ fontSize: 14 }} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDeleteCandidate(recipe);
+                        }}
+                        sx={{
+                          bgcolor: "rgba(255,255,255,0.9)",
+                          backdropFilter: "blur(4px)",
+                          width: 32,
+                          height: 32,
+                          "&:hover": { bgcolor: "white", color: "error.main" },
+                        }}
+                      >
+                        <Delete sx={{ fontSize: 14 }} />
+                      </IconButton>
+                    </Stack>
                     <Typography variant="caption" sx={{ color: "common.white", fontWeight: 500 }}>
                       {recipe.title}
                     </Typography>
@@ -154,6 +209,16 @@ function MyRecipesSection({ token }: MyRecipesSectionProps) {
           </Grid>
         ) : null}
       </Box>
+
+      <RecipeManagementModal
+        token={token}
+        editingRecipe={editingRecipe}
+        deleteCandidate={deleteCandidate}
+        onCloseEdit={() => setEditingRecipe(null)}
+        onCloseDelete={() => setDeleteCandidate(null)}
+        onRecipeUpdated={handleRecipeUpdated}
+        onRecipeDeleted={handleRecipeDeleted}
+      />
     </Paper>
   );
 }
