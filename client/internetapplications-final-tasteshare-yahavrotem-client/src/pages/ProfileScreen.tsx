@@ -346,7 +346,7 @@ const ProfileScreen = ({ token, initialUser, onProfileUpdated }: ProfileScreenPr
         </Box>
       </Paper>
 
-      <MyRecipesSection token={token} userId={profile.id} />
+      <MyRecipesSection token={token} />
     </Box>
   );
 };

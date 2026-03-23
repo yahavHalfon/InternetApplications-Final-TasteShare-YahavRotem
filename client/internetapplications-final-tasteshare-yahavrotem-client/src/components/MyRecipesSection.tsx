@@ -19,15 +19,12 @@ import {
   Typography,
 } from "@mui/material";
 import { Add, AddPhotoAlternate, Delete, Edit, GridView, Restaurant } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../config/env";
 import { recipeService, type ApiRecipe } from "../services/recipeService";
-import dayjs from "dayjs";
-import type { RecipeFeedItem } from "../types/recipe";
-import RecipeDetailModal from "./RecipeDetailModal";
 
 type MyRecipesSectionProps = {
   token: string;
-  userId: string;
 };
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -80,13 +77,12 @@ const toApiAssetUrl = (assetPath?: string): string => {
   return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
 };
 
-function MyRecipesSection({ token, userId }: MyRecipesSectionProps) {
+function MyRecipesSection({ token }: MyRecipesSectionProps) {
+  const navigate = useNavigate();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const [recipes, setRecipes] = useState<ApiRecipe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRecipe, setSelectedRecipe] = useState<RecipeFeedItem | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<ApiRecipe | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -120,35 +116,8 @@ function MyRecipesSection({ token, userId }: MyRecipesSectionProps) {
     void loadMyRecipes();
   }, [token]);
 
-  const toFeedItem = (recipe: ApiRecipe): RecipeFeedItem => ({
-    _id: recipe._id,
-    userID: recipe.userId,
-    title: recipe.title,
-    content: recipe.description,
-    image: toApiAssetUrl(recipe.image) || undefined,
-    createdAt: dayjs(recipe.createdAt).format("DD/MM/YYYY"),
-    likesCount: recipe.likedBy?.length ?? 0,
-    likedBy: recipe.likedBy ?? [],
-    commentsCount: 0,
-    cookTime: recipe.cookTime,
-    difficulty: recipe.difficulty,
-  });
-
-  const handleRecipeClick = (recipe: ApiRecipe) => {
-    setSelectedRecipe(toFeedItem(recipe));
-    setIsDetailOpen(true);
-  };
-
-  const handleCloseRecipe = () => {
-    setIsDetailOpen(false);
-    setSelectedRecipe(null);
-  };
-
-  const handleRecipeLikeChange = (recipeId: string, likedBy: string[]) => {
-    setRecipes((prev) =>
-      prev.map((recipe) => (recipe._id === recipeId ? { ...recipe, likedBy } : recipe)),
-    );
-    setSelectedRecipe((prev) => (prev && prev._id === recipeId ? { ...prev, likedBy, likesCount: likedBy.length } : prev));
+  const handleRecipeClick = (recipeId: string) => {
+    navigate(`/recipes/${recipeId}`);
   };
 
   const openEditDialog = (recipe: ApiRecipe) => {
@@ -277,18 +246,6 @@ function MyRecipesSection({ token, userId }: MyRecipesSectionProps) {
       );
 
       setRecipes((prev) => prev.map((recipe) => (recipe._id === updatedRecipe._id ? { ...recipe, ...updatedRecipe } : recipe)));
-      setSelectedRecipe((prev) =>
-        prev && prev._id === updatedRecipe._id
-          ? {
-              ...prev,
-              title: updatedRecipe.title,
-              content: updatedRecipe.description,
-              image: toApiAssetUrl(updatedRecipe.image) || prev.image,
-              cookTime: updatedRecipe.cookTime,
-              difficulty: updatedRecipe.difficulty,
-            }
-          : prev,
-      );
       closeEditDialog();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Failed to update recipe.");
@@ -308,8 +265,6 @@ function MyRecipesSection({ token, userId }: MyRecipesSectionProps) {
     try {
       await recipeService.deleteRecipe(deleteCandidate._id, token);
       setRecipes((prev) => prev.filter((recipe) => recipe._id !== deleteCandidate._id));
-      setSelectedRecipe((prev) => (prev && prev._id === deleteCandidate._id ? null : prev));
-      setIsDetailOpen((prevOpen) => (selectedRecipe?._id === deleteCandidate._id ? false : prevOpen));
       setDeleteCandidate(null);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete recipe.");
@@ -379,7 +334,7 @@ function MyRecipesSection({ token, userId }: MyRecipesSectionProps) {
             {recipes.map((recipe) => (
               <Grid key={recipe._id} size={{ xs: 6, md: 4, lg: 3 }}>
                 <Box
-                  onClick={() => handleRecipeClick(recipe)}
+                  onClick={() => handleRecipeClick(recipe._id)}
                   sx={{
                     position: "relative",
                     aspectRatio: "1",
@@ -462,17 +417,6 @@ function MyRecipesSection({ token, userId }: MyRecipesSectionProps) {
           </Grid>
         ) : null}
       </Box>
-
-      {selectedRecipe ? (
-        <RecipeDetailModal
-          recipe={selectedRecipe}
-          open={isDetailOpen}
-          onClose={handleCloseRecipe}
-          token={token}
-          userId={userId}
-          onLikeChange={handleRecipeLikeChange}
-        />
-      ) : null}
 
       <Dialog open={!!editingRecipe} onClose={closeEditDialog} fullWidth maxWidth="md">
         <DialogTitle>Edit Recipe</DialogTitle>
