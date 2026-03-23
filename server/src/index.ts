@@ -10,7 +10,6 @@ dotenv.config({ path: ".env.dev" });
 import authRoute from "./routes/authRoutes";
 import { swaggerUi, swaggerSpec } from "./swagger";
 import recipeRoutes from "./routes/recipeRoutes";
-import commentRoutes from "./routes/commentRoutes";
 import userRoutes from "./routes/userRoutes";
 
 const app = express();
@@ -36,7 +35,6 @@ app.use(cors({
 
 app.use("/auth", authRoute);
 app.use("/recipes", recipeRoutes);
-app.use("/comments", commentRoutes);
 app.use("/users", userRoutes);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
