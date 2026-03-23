@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { Avatar, Box, CircularProgress, Paper, Typography } from "@mui/material";
-import { Clock3, Heart, MessageCircle, Users } from "lucide-react";
+import {
+  AccessTime,
+  Favorite,
+  FavoriteBorder,
+  ChatBubbleOutline,
+  People,
+} from "@mui/icons-material";
 import { API_BASE_URL } from "../config/env";
 import { recipeService, type ApiRecipeDetails } from "../services/recipeService";
 
-type RecipeDetailsProps = {
+type RecipeDetailScreenProps = {
   recipeId: string;
   token?: string;
   userId?: string;
@@ -18,7 +24,7 @@ const toApiAssetUrl = (assetPath?: string): string | undefined => {
   return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
 };
 
-const RecipeDetails = ({ recipeId, token, userId, onLikeChange }: RecipeDetailsProps) => {
+const RecipeDetailScreen = ({ recipeId, token, userId, onLikeChange }: RecipeDetailScreenProps) => {
   const [recipe, setRecipe] = useState<ApiRecipeDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,11 +122,11 @@ const RecipeDetails = ({ recipeId, token, userId, onLikeChange }: RecipeDetailsP
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1.2, py: 0.5, borderRadius: 10, bgcolor: "rgba(255,255,255,0.92)" }}>
-              <Clock3 size={13} />
+              <AccessTime sx={{ fontSize: 13 }} />
               <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{recipe.badges.cookTime}</Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 1.2, py: 0.5, borderRadius: 10, bgcolor: "rgba(255,255,255,0.92)" }}>
-              <Users size={13} />
+              <People sx={{ fontSize: 13 }} />
               <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{recipe.badges.servings} servings</Typography>
             </Box>
             <Box sx={{ px: 1.2, py: 0.5, borderRadius: 10, bgcolor: "rgba(255,255,255,0.92)" }}>
@@ -144,18 +150,15 @@ const RecipeDetails = ({ recipeId, token, userId, onLikeChange }: RecipeDetailsP
                 transition: "opacity 0.2s",
               }}
             >
-              <Heart
-                size={17}
-                fill={isLikedByUser ? "#ef4444" : "none"}
-                style={{
-                  color: isLikedByUser ? "#ef4444" : "#9ca3af",
-                  transition: "all 0.2s",
-                }}
-              />
+              {isLikedByUser ? (
+                <Favorite sx={{ fontSize: 17, color: "error.main" }} />
+              ) : (
+                <FavoriteBorder sx={{ fontSize: 17, color: "grey.400" }} />
+              )}
               <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{likesCount}</Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-              <MessageCircle size={17} />
+              <ChatBubbleOutline sx={{ fontSize: 17 }} />
               <Typography sx={{ fontSize: 14, fontWeight: 600 }}>{recipe.stats.commentsCount}</Typography>
             </Box>
           </Box>
@@ -221,4 +224,4 @@ const RecipeDetails = ({ recipeId, token, userId, onLikeChange }: RecipeDetailsP
   );
 };
 
-export default RecipeDetails;
+export default RecipeDetailScreen;
