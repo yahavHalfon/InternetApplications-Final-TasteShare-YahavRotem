@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { CredentialResponse } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import slugify from "slugify";
@@ -7,6 +7,8 @@ import { GOOGLE_CLIENT_ID } from "./config/env";
 import { authService, type AuthSession } from "./services/authService";
 import AuthScreen from "./components/AuthScreen";
 import MainLayout from "./components/MainLayout";
+import { AuthProvider } from "./context/AuthContext";
+import { useAuth } from "./context/useAuth";
 
 type AuthMode = "login" | "register";
 type RegisterStep = 1 | 2;
@@ -21,14 +23,21 @@ type RegisterCredentials = {
   password: string;
 };
 
-const ACCESS_TOKEN_STORAGE_KEY = "accessToken";
-const REFRESH_TOKEN_STORAGE_KEY = "refreshToken";
+const USER_STORAGE_KEY = "authUser";
 
 const normalizeUsername = (value: string): string =>
   slugify(value, { lower: true, strict: true, trim: true, replacement: "" }).slice(0, 30);
 
-const App = () => {
+const AppContent = () => {
   const navigate = useNavigate();
+  const {
+    accessToken,
+    refreshToken,
+    login,
+    logout,
+    isAuthenticated,
+    validateAndRefreshToken,
+  } = useAuth();
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [registerStep, setRegisterStep] = useState<RegisterStep>(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -36,10 +45,8 @@ const App = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [notification, setNotification] = useState<Notification>(null);
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
   const [registerCredentials, setRegisterCredentials] = useState<RegisterCredentials | null>(null);
-
+  const [userSession, setUserSession] = useState<AuthSession | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -64,62 +71,35 @@ const App = () => {
     };
   }, [avatarPreviewUrl]);
 
+  // Initialize session on app load
+  useEffect(() => {
+    const initializeSession = async () => {
+      try {
+        const isValid = await validateAndRefreshToken();
+        if (isValid) {
+          const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+          if (storedUser && accessToken && refreshToken) {
+            const parsedUser = JSON.parse(storedUser) as AuthSession["user"];
+            setUserSession({
+              token: accessToken,
+              refreshToken,
+              user: parsedUser,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to initialize session:", error);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+
+    void initializeSession();
+  }, [accessToken, refreshToken, validateAndRefreshToken]);
+
   const notify = (type: "success" | "error", message: string) => {
     setNotification({ type, message });
   };
-
-  const clearSession = useCallback(() => {
-    setSession(null);
-    localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
-  }, []);
-
-  const saveSession = useCallback((nextSession: AuthSession) => {
-    setSession(nextSession);
-    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, nextSession.token);
-    localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, nextSession.refreshToken);
-  }, []);
-
-  const validateAndRefreshToken = useCallback(async (): Promise<boolean> => {
-    if (refreshPromiseRef.current) {
-      return refreshPromiseRef.current;
-    }
-
-    const doValidate = async (): Promise<boolean> => {
-      const currentRefreshToken = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
-
-      if (!currentRefreshToken) {
-        return false;
-      }
-
-      try {
-        const refreshedSession = await authService.refreshToken(currentRefreshToken);
-        saveSession(refreshedSession);
-        return true;
-      } catch {
-        clearSession();
-        return false;
-      }
-    };
-
-    refreshPromiseRef.current = doValidate().finally(() => {
-      refreshPromiseRef.current = null;
-    });
-
-    return refreshPromiseRef.current;
-  }, [clearSession, saveSession]);
-
-  useEffect(() => {
-    const restoreSession = async () => {
-      const isValid = await validateAndRefreshToken();
-      if (!isValid) {
-        clearSession();
-      }
-      setIsInitializing(false);
-    };
-
-    void restoreSession();
-  }, [clearSession, validateAndRefreshToken]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -134,9 +114,11 @@ const App = () => {
         email,
         password,
       });
-      saveSession(authSession);
+      login(authSession.token, authSession.refreshToken);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authSession.user));
+      setUserSession(authSession);
       notify("success", "You are now logged in.");
-      navigate("/feed", { replace: true });
+      navigate("/recipes", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Login failed.");
     } finally {
@@ -186,9 +168,11 @@ const App = () => {
       }
 
       const authSession = await authService.register(registerFormData);
-      saveSession(authSession);
+      login(authSession.token, authSession.refreshToken);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authSession.user));
+      setUserSession(authSession);
       notify("success", "Your account has been created successfully.");
-      navigate("/feed", { replace: true });
+      navigate("/recipes", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Registration failed.");
     } finally {
@@ -220,9 +204,11 @@ const App = () => {
 
     try {
       const authSession = await authService.googleSignIn(credential);
-      saveSession(authSession);
+      login(authSession.token, authSession.refreshToken);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authSession.user));
+      setUserSession(authSession);
       notify("success", "Google sign-in completed successfully.");
-      navigate("/feed", { replace: true });
+      navigate("/recipes", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Google sign-in failed.");
     } finally {
@@ -236,14 +222,16 @@ const App = () => {
   };
 
   const handleLogout = async () => {
-    if (session) {
+    if (refreshToken && accessToken) {
       try {
-        await authService.logout(session.refreshToken, session.token);
+        await authService.logout(refreshToken, accessToken);
       } catch (error) {
         console.error("Logout error", error);
       }
     }
-    clearSession();
+    logout();
+    localStorage.removeItem(USER_STORAGE_KEY);
+    setUserSession(null);
     notify("success", "You have been logged out.");
   };
 
@@ -283,14 +271,15 @@ const App = () => {
     );
   }
 
-  if (session) {
+  if (isAuthenticated && userSession) {
     return (
       <MainLayout
-        session={session}
+        session={userSession}
         notification={renderNotification()}
         onLogout={() => void handleLogout()}
         onProfileUpdated={(updatedUser) => {
-          setSession((prevSession) => {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+          setUserSession((prevSession) => {
             if (!prevSession) {
               return prevSession;
             }
@@ -332,6 +321,14 @@ const App = () => {
       }}
       onGoogleError={handleGoogleError}
     />
+  );
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

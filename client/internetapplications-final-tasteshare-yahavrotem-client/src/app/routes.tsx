@@ -8,7 +8,7 @@ export function RecipeDetailRoute() {
   const recipeId = params.id;
 
   if (!recipeId) {
-    return <Navigate to="/feed" replace />;
+    return <Navigate to="/recipes" replace />;
   }
 
   return <RecipeDetailScreen recipeId={recipeId} />;

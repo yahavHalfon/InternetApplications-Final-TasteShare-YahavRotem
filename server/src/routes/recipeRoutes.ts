@@ -3,6 +3,7 @@ import authMiddleware from "../middleware/authMiddleware";
 import { uploadRecipeImage } from "../middleware/upload";
 const router = express.Router();
 import recipeController from "../controllers/recipeController";
+import commentController from "../controllers/commentController";
 
 /**
  * @swagger
@@ -23,9 +24,7 @@ import recipeController from "../controllers/recipeController";
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Recipe'
+ *               $ref: '#/components/schemas/RecipeListResponse'
  */
 router.get("/", recipeController.get.bind(recipeController));
 
@@ -73,11 +72,80 @@ router.get("/me", authMiddleware, recipeController.getMyRecipes.bind(recipeContr
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Recipe'
+ *               $ref: '#/components/schemas/RecipeDetails'
  *       404:
  *         description: The recipe was not found
  */
 router.get("/:id", recipeController.getById.bind(recipeController));
+
+/**
+ * @swagger
+ * /recipes/{id}/comments:
+ *   get:
+ *     summary: Get recipe comments formatted for direct UI rendering
+ *     tags: [Recipes]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The recipe id
+ *     responses:
+ *       200:
+ *         description: The recipe comments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/RecipeCommentResponse'
+ *       404:
+ *         description: Recipe not found
+ */
+router.get("/:id/comments", commentController.getRecipeComments.bind(commentController));
+
+/**
+ * @swagger
+ * /recipes/{id}/comments:
+ *   post:
+ *     summary: Create a new comment for recipe
+ *     tags: [Recipes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The recipe id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - text
+ *             properties:
+ *               text:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Comment created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RecipeCommentResponse'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Recipe not found
+ */
+router.post("/:id/comments", authMiddleware, commentController.createRecipeComment.bind(commentController));
 
 /**
  * @swagger

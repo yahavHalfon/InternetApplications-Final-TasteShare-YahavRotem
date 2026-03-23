@@ -28,7 +28,7 @@ type NavItem = {
 };
 
 const navItems: readonly NavItem[] = [
-  { to: "/feed", label: "Feed", icon: Home },
+  { to: "/recipes", label: "Recipes", icon: Home },
   { to: "/search", label: "AI Search", icon: AutoAwesome },
   { to: "/create", label: "Add Recipe", icon: EditNote },
   { to: "/profile", label: "Profile", icon: Person },

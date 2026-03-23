@@ -9,6 +9,7 @@ export type ApiRecipe = {
   ingredients?: string[];
   instructions?: string[];
   likedBy?: string[];
+  commentsCount?: number;
   cookTime: string;
   servings?: number;
   difficulty: "Easy" | "Medium" | "Advanced";

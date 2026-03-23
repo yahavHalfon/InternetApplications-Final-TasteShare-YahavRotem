@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import dotenv from "dotenv";
 import User from "./model/userModel";
 import Recipe, { type RecipeDifficulty } from "./model/recipeModel";
+import Comment from "./model/commentModel";
 
 dotenv.config({ path: ".env.dev" });
 
@@ -210,6 +211,31 @@ const buildSeedRecipes = (userIds: string[]) => {
   });
 };
 
+const commentTemplates = [
+  "Looks great, I will try this tonight.",
+  "Made it today and it turned out really good.",
+  "Nice recipe, I added a bit more garlic.",
+  "Super easy and tasty, thanks for sharing.",
+];
+
+const buildSeedComments = (recipeIds: string[], userIds: string[]) => {
+  const comments: Array<{ recipeId: string; userId: string; text: string }> = [];
+
+  recipeIds.forEach((recipeId, index) => {
+    const commentsCount = index % 3;
+
+    for (let offset = 0; offset < commentsCount; offset++) {
+      comments.push({
+        recipeId,
+        userId: userIds[(index + offset) % userIds.length],
+        text: commentTemplates[(index + offset) % commentTemplates.length],
+      });
+    }
+  });
+
+  return comments;
+};
+
 async function seedDatabase() {
   try {
     console.log("Connecting to Mongo:", MONGODB_URI);
@@ -249,15 +275,25 @@ async function seedDatabase() {
     }
 
     const recipesToInsert = buildSeedRecipes(createdUsers.map((user) => String(user._id)));
+    const createdUserIds = createdUsers.map((user) => String(user._id));
 
     await Recipe.deleteMany({ title: /^Seed Recipe #\d{3} - / });
-    await Recipe.insertMany(recipesToInsert);
+    const insertedRecipes = await Recipe.insertMany(recipesToInsert);
+
+    const insertedRecipeIds = insertedRecipes.map((recipe) => String(recipe._id));
+    await Comment.deleteMany({ recipeId: { $in: insertedRecipeIds } });
+
+    const commentsToInsert = buildSeedComments(insertedRecipeIds, createdUserIds);
+    if (commentsToInsert.length > 0) {
+      await Comment.insertMany(commentsToInsert);
+    }
 
     console.log(`Seeded ${createdUsers.length} users.`);
     createdUsers.forEach((user) => {
       console.log(`- ${user.email} (${user.name} / ${user.username})`);
     });
     console.log(`Seeded ${TOTAL_RECIPES} recipes.`);
+    console.log(`Seeded ${commentsToInsert.length} comments.`);
     console.log(`Recipes mapped to seeded users: ${TOTAL_RECIPES - UNKNOWN_USER_RECIPES}.`);
     console.log(`Recipes with random user IDs (Unknown fallback): ${UNKNOWN_USER_RECIPES}.`);
     process.exit(0);
