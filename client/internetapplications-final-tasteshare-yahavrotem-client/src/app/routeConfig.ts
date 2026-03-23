@@ -1,6 +1,6 @@
 export const appRoutes = [
   {
-    path: "/feed",
+    path: "/recipes",
     title: "Feed",
     description: "Your personalized recipe stream is ready.",
   },

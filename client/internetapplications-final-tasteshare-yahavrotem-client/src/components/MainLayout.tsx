@@ -30,12 +30,12 @@ function MainLayout({ session, notification, onLogout, onProfileUpdated }: MainL
       <Box component="main" sx={{ ml: "240px", minHeight: "100vh", p: { xs: 2, md: 3 } }}>
         {notification}
         <Routes>
-          <Route path="/" element={<Navigate to="/feed" replace />} />
+          <Route path="/" element={<Navigate to="/recipes" replace />} />
           <Route
             path="/recipes/:id"
             element={(
               <Suspense fallback={routeLoadingFallback}>
-                <RecipeDetailRoute />
+                <RecipeDetailRoute token={session.token} userId={session.user.id} />
               </Suspense>
             )}
           />
@@ -45,7 +45,7 @@ function MainLayout({ session, notification, onLogout, onProfileUpdated }: MainL
               path={route.path}
               element={
                 <Suspense fallback={routeLoadingFallback}>
-                  {route.path === "/feed" ? (
+                  {route.path === "/recipes" ? (
                     <FeedScreen token={session.token} userId={session.user.id} />
                   ) : route.path === "/create" ? (
                     <CreatePostScreen token={session.token} />
@@ -63,7 +63,7 @@ function MainLayout({ session, notification, onLogout, onProfileUpdated }: MainL
               }
             />
           ))}
-          <Route path="*" element={<Navigate to="/feed" replace />} />
+          <Route path="*" element={<Navigate to="/recipes" replace />} />
         </Routes>
       </Box>
     </Box>

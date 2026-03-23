@@ -136,7 +136,7 @@ const App = () => {
       });
       saveSession(authSession);
       notify("success", "You are now logged in.");
-      navigate("/feed", { replace: true });
+      navigate("/recipes", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Login failed.");
     } finally {
@@ -188,7 +188,7 @@ const App = () => {
       const authSession = await authService.register(registerFormData);
       saveSession(authSession);
       notify("success", "Your account has been created successfully.");
-      navigate("/feed", { replace: true });
+      navigate("/recipes", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Registration failed.");
     } finally {
@@ -222,7 +222,7 @@ const App = () => {
       const authSession = await authService.googleSignIn(credential);
       saveSession(authSession);
       notify("success", "Google sign-in completed successfully.");
-      navigate("/feed", { replace: true });
+      navigate("/recipes", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Google sign-in failed.");
     } finally {
