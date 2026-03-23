@@ -26,6 +26,7 @@ const toApiAssetUrl = (assetPath?: string): string | undefined => {
 
 const RecipeDetailScreen = ({ recipeId, onLikeChange }: RecipeDetailScreenProps & { onLikeChange?: (recipeId: string, likedBy: string[]) => void }) => {
   const { accessToken } = useAuth();
+  const userId = accessToken ? (getUserIdFromToken(accessToken) ?? undefined) : undefined;
   const [recipe, setRecipe] = useState<ApiRecipeDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +51,6 @@ const RecipeDetailScreen = ({ recipeId, onLikeChange }: RecipeDetailScreenProps 
         });
         setLikesCount(data.stats.likesCount);
         setCommentsCount(data.stats.commentsCount);
-        const userId = accessToken ? getUserIdFromToken(accessToken) : null;
         setIsLikedByUser(userId ? (data.likedBy?.includes(userId) ?? false) : false);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Failed to load recipe details.");
@@ -60,7 +60,7 @@ const RecipeDetailScreen = ({ recipeId, onLikeChange }: RecipeDetailScreenProps 
     };
 
     void loadRecipe();
-  }, [recipeId]);
+  }, [recipeId, userId]);
 
   const handleLikeClick = async () => {
     if (!accessToken || isLiking) {
@@ -70,7 +70,6 @@ const RecipeDetailScreen = ({ recipeId, onLikeChange }: RecipeDetailScreenProps 
     setIsLiking(true);
     try {
       const updatedRecipe = await recipeService.toggleLike(recipeId, accessToken);
-      const userId = accessToken ? getUserIdFromToken(accessToken) : null;
       const newLikedBy = updatedRecipe.likedBy || [];
       setIsLikedByUser(userId ? newLikedBy.includes(userId) : false);
       setLikesCount(newLikedBy.length);
@@ -227,15 +226,12 @@ const RecipeDetailScreen = ({ recipeId, onLikeChange }: RecipeDetailScreenProps 
       </Box>
 
       <Paper variant="outlined" sx={{ mt: 2.5, p: { xs: 2, md: 2.5 }, borderRadius: 3, borderColor: "grey.200" }}>
-        {accessToken ? (
-          <RecipeComments
-            recipeId={recipeId}
-            token={accessToken}
-            onCountChange={setCommentsCount}
-          />
-        ) : (
-          <Typography color="text.secondary">Sign in to view and post comments.</Typography>
-        )}
+        <RecipeComments
+          recipeId={recipeId}
+          token={accessToken ?? undefined}
+          userId={userId}
+          onCountChange={setCommentsCount}
+        />
       </Paper>
     </Box>
   );

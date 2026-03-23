@@ -62,7 +62,7 @@ Swagger API documentation is available at `http://localhost:3000/api-docs`.
 ```
 **Success Response** :
 - **Code** : `201 CREATED`
-- **Content** : `{ "token": "...", "refreshToken": "..." }`
+- **Content** : `{ "token": "...", "refreshToken": "...", "user": { ... } }`
 
 **Curl Example** :
 ```bash
@@ -87,7 +87,7 @@ curl -X POST http://localhost:3000/auth/register \
 ```
 **Success Response** :
 - **Code** : `200 OK`
-- **Content** : `{ "token": "...", "refreshToken": "..." }`
+- **Content** : `{ "token": "...", "refreshToken": "...", "user": { ... } }`
 
 **Curl Example** :
 ```bash
@@ -111,7 +111,7 @@ curl -X POST http://localhost:3000/auth/login \
 ```
 **Success Response** :
 - **Code** : `200 OK`
-- **Content** : `{ "token": "...", "refreshToken": "..." }`
+- **Content** : `{ "token": "...", "refreshToken": "...", "user": { ... } }`
 
 **Curl Example** :
 ```bash
@@ -152,6 +152,33 @@ curl -X POST http://localhost:3000/auth/logout \
 
 **URL** : `/recipes`
 **Method** : `GET`
+**Response Shape** :
+```json
+{
+    "data": [
+        {
+            "_id": "...",
+            "userId": "...",
+            "image": "/uploads/recipes/file.jpg",
+            "title": "...",
+            "description": "...",
+            "ingredients": ["..."],
+            "instructions": ["..."],
+            "likedBy": ["..."],
+            "cookTime": "25 min",
+            "servings": 4,
+            "difficulty": "Easy",
+            "commentsCount": 3,
+            "createdAt": "...",
+            "updatedAt": "..."
+        }
+    ],
+    "page": 1,
+    "limit": 10,
+    "total": 30,
+    "hasMore": true
+}
+```
 **Curl Example** :
 ```bash
 curl http://localhost:3000/recipes
@@ -171,6 +198,35 @@ curl "http://localhost:3000/recipes"
 
 **URL** : `/recipes/:id`
 **Method** : `GET`
+**Response Shape** :
+```json
+{
+    "id": "...",
+    "title": "...",
+    "image": "/uploads/recipes/file.jpg",
+    "description": "...",
+    "createdAt": "...",
+    "createdAtLabel": "12 Mar 2026",
+    "badges": {
+        "cookTime": "25 min",
+        "servings": 4,
+        "difficulty": "Easy"
+    },
+    "stats": {
+        "likesCount": 10,
+        "commentsCount": 4
+    },
+    "author": {
+        "id": "...",
+        "name": "...",
+        "username": "...",
+        "avatarUrl": "..."
+    },
+    "ingredients": ["..."],
+    "instructions": ["..."],
+    "likedBy": ["..."]
+}
+```
 
 **Curl Example** :
 ```bash
@@ -282,82 +338,58 @@ curl -X POST http://localhost:3000/recipes/<RECIPE_ID>/comments \
 }'
 ```
 
-#### Get all comments
+## Data Models
 
-**URL** : `/comments`
-**Method** : `GET`
+### AuthSession
 
-**Curl Example** :
-```bash
-curl http://localhost:3000/comments
-```
-
-#### Get a comment by ID
-
-**URL** : `/comments/:id`
-**Method** : `GET`
-
-**Curl Example** :
-```bash
-curl http://localhost:3000/comments/<COMMENT_ID>
-```
-
-#### Create a new comment
-
-**URL** : `/comments`
-**Method** : `POST`
-**Headers** : `Authorization: Bearer <token>`
-**Body** :
 ```json
 {
-    "recipeId": "<RECIPE_ID>",
-    "text": "Comment content"
+    "token": "...",
+    "refreshToken": "...",
+    "user": {
+        "id": "...",
+        "email": "user@example.com",
+        "name": "Maria Chen",
+        "username": "mariachen",
+        "avatarUrl": "/uploads/profiles/file.jpg",
+        "bio": "...",
+        "website": "https://...",
+        "location": "Tel Aviv"
+    }
 }
 ```
 
-**Curl Example** :
-```bash
-curl -X POST http://localhost:3000/comments \
--H "Authorization: Bearer <token>" \
--H "Content-Type: application/json" \
--d '{
-    "recipeId": "<RECIPE_ID>",
-    "text": "Comment content"
-}'
-```
+### Recipe Model
 
-#### Update a comment
-
-**URL** : `/comments/:id`
-**Method** : `PUT`
-**Headers** : `Authorization: Bearer <token>`
-**Body** :
 ```json
 {
-    "text": "Updated Comment Content"
+    "_id": "...",
+    "userId": "...",
+    "image": "/uploads/recipes/file.jpg",
+    "title": "...",
+    "description": "...",
+    "ingredients": ["..."],
+    "instructions": ["..."],
+    "likedBy": ["..."],
+    "cookTime": "25 min",
+    "servings": 4,
+    "difficulty": "Easy",
+    "createdAt": "...",
+    "updatedAt": "..."
 }
 ```
 
-**Curl Example** :
-```bash
-curl -X PUT http://localhost:3000/comments/<COMMENT_ID> \
--H "Authorization: Bearer <token>" \
--H "Content-Type: application/json" \
--d '{
-    "text": "Updated Comment Content"
-}'
-```
+### Comment Model
 
-#### Delete a comment
-
-**URL** : `/comments/:id`
-**Method** : `DELETE`
-**Headers** : `Authorization: Bearer <token>`
-
-**Curl Example** :
-```bash
-curl -X DELETE http://localhost:3000/comments/<COMMENT_ID> \
--H "Authorization: Bearer <token>"
+```json
+{
+    "_id": "...",
+    "recipeId": "...",
+    "userId": "...",
+    "text": "Looks delicious!",
+    "createdAt": "...",
+    "updatedAt": "..."
+}
 ```
 
 ### Users

@@ -24,9 +24,7 @@ import commentController from "../controllers/commentController";
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Recipe'
+ *               $ref: '#/components/schemas/RecipeListResponse'
  */
 router.get("/", recipeController.get.bind(recipeController));
 
@@ -74,7 +72,7 @@ router.get("/me", authMiddleware, recipeController.getMyRecipes.bind(recipeContr
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Recipe'
+ *               $ref: '#/components/schemas/RecipeDetails'
  *       404:
  *         description: The recipe was not found
  */
@@ -101,26 +99,7 @@ router.get("/:id", recipeController.getById.bind(recipeController));
  *             schema:
  *               type: array
  *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: string
- *                   recipeId:
- *                     type: string
- *                   text:
- *                     type: string
- *                   createdAt:
- *                     type: string
- *                     format: date-time
- *                   author:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                       name:
- *                         type: string
- *                       avatarUrl:
- *                         type: string
+ *                 $ref: '#/components/schemas/RecipeCommentResponse'
  *       404:
  *         description: Recipe not found
  */
@@ -158,26 +137,7 @@ router.get("/:id/comments", commentController.getRecipeComments.bind(commentCont
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: string
- *                 recipeId:
- *                   type: string
- *                 text:
- *                   type: string
- *                 createdAt:
- *                   type: string
- *                   format: date-time
- *                 author:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     name:
- *                       type: string
- *                     avatarUrl:
- *                       type: string
+ *               $ref: '#/components/schemas/RecipeCommentResponse'
  *       400:
  *         description: Bad request
  *       401:
