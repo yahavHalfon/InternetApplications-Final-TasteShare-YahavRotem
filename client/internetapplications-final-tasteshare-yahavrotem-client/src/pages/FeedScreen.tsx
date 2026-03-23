@@ -7,6 +7,7 @@ import type { RecipeFeedItem } from "../types/recipe";
 import { API_BASE_URL } from "../config/env";
 import { recipeService } from "../services/recipeService";
 import { userService } from "../services/userService";
+import { commentService } from "../services/commentService";
 
 const PAGE_SIZE = 9;
 
@@ -56,11 +57,17 @@ const FeedScreen = ({ token, userId }: FeedScreenProps) => {
     setSelectedRecipe(null);
   };
 
+  const updateRecipeState = (recipeId: string, updater: (recipe: RecipeFeedItem) => RecipeFeedItem) => {
+    setRecipes((prev) => prev.map((r) => (r._id === recipeId ? updater(r) : r)));
+    setSelectedRecipe((prev) => (prev && prev._id === recipeId ? updater(prev) : prev));
+  };
+
   const handleRecipeLikeChange = (recipeId: string, likedBy: string[]) => {
-    setRecipes((prev) =>
-      prev.map((r) => (r._id === recipeId ? { ...r, likedBy, likesCount: likedBy.length } : r))
-    );
-    setSelectedRecipe((prev) => (prev && prev._id === recipeId ? { ...prev, likedBy, likesCount: likedBy.length } : prev));
+    updateRecipeState(recipeId, (recipe) => ({ ...recipe, likedBy, likesCount: likedBy.length }));
+  };
+
+  const handleRecipeCommentsCountChange = (recipeId: string, commentsCount: number) => {
+    updateRecipeState(recipeId, (recipe) => ({ ...recipe, commentsCount }));
   };
 
   const resolveUsers = useCallback(async (userIds: string[]) => {
@@ -112,19 +119,25 @@ const FeedScreen = ({ token, userId }: FeedScreenProps) => {
       const response = await recipeService.getRecipes(page, PAGE_SIZE);
       const incomingRecipes = response.data;
 
-      const mappedRecipes: RecipeFeedItem[] = incomingRecipes.map((recipe) => ({
-        _id: recipe._id,
-        userID: recipe.userId,
-        title: recipe.title,
-        content: recipe.description,
-        image: toApiAssetUrl(recipe.image),
-        createdAt: dayjs(recipe.createdAt).format("DD/MM/YYYY"),
-        likesCount: recipe.likedBy?.length ?? 0,
-        likedBy: recipe.likedBy ?? [],
-        commentsCount: 0,
-        cookTime: recipe.cookTime,
-        difficulty: recipe.difficulty,
-      }));
+      const mappedRecipes: RecipeFeedItem[] = await Promise.all(
+        incomingRecipes.map(async (recipe) => {
+          const comments = await commentService.getRecipeComments(recipe._id).catch(() => []);
+
+          return {
+            _id: recipe._id,
+            userID: recipe.userId,
+            title: recipe.title,
+            content: recipe.description,
+            image: toApiAssetUrl(recipe.image),
+            createdAt: dayjs(recipe.createdAt).format("DD/MM/YYYY"),
+            likesCount: recipe.likedBy?.length ?? 0,
+            likedBy: recipe.likedBy ?? [],
+            commentsCount: comments.length,
+            cookTime: recipe.cookTime,
+            difficulty: recipe.difficulty,
+          };
+        })
+      );
 
       await resolveUsers(mappedRecipes.map((recipe) => recipe.userID));
 
@@ -222,6 +235,7 @@ const FeedScreen = ({ token, userId }: FeedScreenProps) => {
           token={token}
           userId={userId}
           onLikeChange={handleRecipeLikeChange}
+          onCommentCountChange={handleRecipeCommentsCountChange}
         />
       )}
     </Box>

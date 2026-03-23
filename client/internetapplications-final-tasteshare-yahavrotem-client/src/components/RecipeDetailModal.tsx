@@ -22,6 +22,7 @@ import {
 import { API_BASE_URL } from "../config/env";
 import { recipeService, type ApiRecipeDetails } from "../services/recipeService";
 import type { RecipeFeedItem } from "../types/recipe";
+import RecipeComments from "./RecipeComments";
 
 type RecipeDetailModalProps = {
   recipe: RecipeFeedItem | null;
@@ -30,6 +31,7 @@ type RecipeDetailModalProps = {
   token?: string;
   userId?: string;
   onLikeChange?: (recipeId: string, likedBy: string[]) => void;
+  onCommentCountChange?: (recipeId: string, commentsCount: number) => void;
 };
 
 const toApiAssetUrl = (assetPath?: string): string | undefined => {
@@ -39,11 +41,12 @@ const toApiAssetUrl = (assetPath?: string): string | undefined => {
   return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
 };
 
-const RecipeDetailModal = ({ recipe, open, onClose, token, userId, onLikeChange }: RecipeDetailModalProps) => {
+const RecipeDetailModal = ({ recipe, open, onClose, token, userId, onLikeChange, onCommentCountChange }: RecipeDetailModalProps) => {
   const [details, setDetails] = useState<ApiRecipeDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLiking, setIsLiking] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(0);
 
   const recipeId = recipe?._id;
 
@@ -67,6 +70,7 @@ const RecipeDetailModal = ({ recipe, open, onClose, token, userId, onLikeChange 
             avatarUrl: toApiAssetUrl(data.author.avatarUrl) || "",
           },
         });
+        setCommentsCount(data.stats.commentsCount);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Failed to load recipe details.");
       } finally {
@@ -97,13 +101,21 @@ const RecipeDetailModal = ({ recipe, open, onClose, token, userId, onLikeChange 
     }
   };
 
+  const handleCommentsCountChange = (count: number) => {
+    if (!recipe) {
+      return;
+    }
+    setCommentsCount(count);
+    onCommentCountChange?.(recipe._id, count);
+  };
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
       fullWidth
       maxWidth="md"
-      scroll="body"
+      scroll="paper"
       slotProps={{
         backdrop: { sx: { bgcolor: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" } },
         paper: {
@@ -168,7 +180,7 @@ const RecipeDetailModal = ({ recipe, open, onClose, token, userId, onLikeChange 
             </Stack>
           </Box>
 
-          <DialogContent sx={{ p: 3 }}>
+          <DialogContent sx={{ p: 3, overflowY: "auto" }}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 0.5 }}>
               <Typography variant="h5" sx={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: 22 }}>
                 {details.title}
@@ -193,7 +205,7 @@ const RecipeDetailModal = ({ recipe, open, onClose, token, userId, onLikeChange 
                 <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 1 }}>
                   <ChatBubbleOutline sx={{ fontSize: 20, color: "grey.400" }} />
                   <Typography variant="body2" color="grey.500">
-                    {details.stats.commentsCount}
+                    {commentsCount}
                   </Typography>
                 </Stack>
               </Stack>
@@ -271,6 +283,13 @@ const RecipeDetailModal = ({ recipe, open, onClose, token, userId, onLikeChange 
                 </Stack>
               </Box>
             </Box>
+
+            <RecipeComments
+              recipeId={recipe._id}
+              token={token}
+              userId={userId}
+              onCountChange={handleCommentsCountChange}
+            />
           </DialogContent>
         </>
       )}
