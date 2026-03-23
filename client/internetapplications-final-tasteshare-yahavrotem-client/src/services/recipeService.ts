@@ -6,8 +6,11 @@ export type ApiRecipe = {
   image: string;
   title: string;
   description: string;
+  ingredients?: string[];
+  instructions?: string[];
   likedBy?: string[];
   cookTime: string;
+  servings?: number;
   difficulty: "Easy" | "Medium" | "Advanced";
   createdAt: string;
 };
@@ -60,9 +63,13 @@ export type CreateRecipePayload = {
 };
 
 export type UpdateRecipePayload = {
+  image?: string;
   title?: string;
   description?: string;
+  ingredients?: string[];
+  instructions?: string[];
   cookTime?: string;
+  servings?: number;
   difficulty?: "Easy" | "Medium" | "Advanced";
 };
 
