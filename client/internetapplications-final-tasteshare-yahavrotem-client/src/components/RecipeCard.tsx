@@ -1,30 +1,44 @@
-import React, { useState } from "react";
-import { Box, Typography, Avatar, Paper } from "@mui/material";
-import { Clock3, Heart, MessageCircle } from "lucide-react";
+import { useState, type MouseEvent } from "react";
+import {
+  Avatar,
+  Box,
+  Card,
+  CardContent,
+  CardMedia,
+  Chip,
+  Stack,
+  Typography,
+} from "@mui/material";
+import {
+  AccessTime,
+  Favorite,
+  FavoriteBorder,
+  ChatBubbleOutline,
+} from "@mui/icons-material";
 import type { RecipeCardProps } from "../types/recipe";
 import { recipeService } from "../services/recipeService";
 
-interface RecipeCardWithActionsProps extends RecipeCardProps {
+type RecipeCardWithActionsProps = RecipeCardProps & {
   userId?: string;
   token?: string;
   onLikeChange?: (recipeId: string, likedBy: string[]) => void;
   onRecipeClick?: (recipeId: string) => void;
-}
+};
 
-const RecipeCard: React.FC<RecipeCardWithActionsProps> = ({
+const RecipeCard = ({
   recipe,
   user,
   userId,
   token,
   onLikeChange,
   onRecipeClick,
-}) => {
+}: RecipeCardWithActionsProps) => {
   const [isLiking, setIsLiking] = useState(false);
 
   const isLikedByUser = userId ? recipe.likedBy.includes(userId) : false;
   const likesCount = recipe.likedBy.length;
 
-  const handleLikeClick = async (e: React.MouseEvent) => {
+  const handleLikeClick = async (e: MouseEvent) => {
     e.stopPropagation();
     if (!userId || !token || isLiking) {
       return;
@@ -42,193 +56,138 @@ const RecipeCard: React.FC<RecipeCardWithActionsProps> = ({
     }
   };
 
+  const difficultyColor =
+    recipe.difficulty === "Easy"
+      ? { bg: "rgba(236,253,245,0.9)", color: "success.main" }
+      : recipe.difficulty === "Medium"
+        ? { bg: "rgba(255,251,235,0.9)", color: "warning.main" }
+        : { bg: "rgba(254,242,242,0.9)", color: "error.main" };
+
   return (
-    <Paper
-      variant="outlined"
+    <Card
       onClick={() => onRecipeClick?.(recipe._id)}
       sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         cursor: "pointer",
-        borderRadius: 2,
-        overflow: "hidden",
-        borderColor: "grey.200",
-        transition: "box-shadow 0.3s",
-        "&:hover": {
-          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-        },
+        transition: "box-shadow 0.2s",
+        "&:hover": { boxShadow: "0 6px 16px rgba(0,0,0,0.08)" },
+        "&:hover img": { transform: "scale(1.03)" },
       }}
     >
-      {recipe.image && (
-        <Box
-          sx={{
-            position: "relative",
-            width: "100%",
-            paddingTop: "62.5%",
-            backgroundColor: "grey.100",
-            overflow: "hidden",
-          }}
-        >
-          <Box
+      {!!recipe.image && (
+        <Box sx={{ position: "relative", aspectRatio: "16/10", overflow: "hidden", bgcolor: "grey.100" }}>
+          <CardMedia
             component="img"
-            src={recipe.image}
+            image={recipe.image}
             alt={recipe.title || "Recipe image"}
             loading="lazy"
-            sx={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              transition: "transform 0.5s",
-              "&:hover": {
-                transform: "scale(1.03)",
-              },
-            }}
+            sx={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.5s" }}
           />
-          <Box
-            sx={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              display: "flex",
-              gap: 1,
-            }}
-          >
-            {recipe.cookTime && (
-              <Box
+          <Stack direction="row" spacing={0.75} sx={{ position: "absolute", top: 12, right: 12 }}>
+            {!!recipe.cookTime && (
+              <Chip
+                icon={<AccessTime sx={{ fontSize: 12 }} />}
+                label={recipe.cookTime}
+                size="small"
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  px: 1,
-                  py: 0.25,
-                  borderRadius: 4,
-                  bgcolor: "rgba(255, 255, 255, 0.9)",
-                  backdropFilter: "blur(4px)",
-                  color: "grey.600",
+                  bgcolor: "rgba(255,255,255,0.9)",
+                  backdropFilter: "blur(8px)",
+                  fontSize: 11,
+                  height: 24,
                 }}
-              >
-                <Clock3 size={11} />
-                <Typography sx={{ fontSize: 11, fontWeight: 500 }}>
-                  {recipe.cookTime}
-                </Typography>
-              </Box>
+              />
             )}
-            {recipe.difficulty && (
-              <Box
+            {!!recipe.difficulty && (
+              <Chip
+                label={recipe.difficulty}
+                size="small"
                 sx={{
-                  px: 1,
-                  py: 0.25,
-                  borderRadius: 4,
-                  backdropFilter: "blur(4px)",
-                  bgcolor:
-                    recipe.difficulty === "Easy" ? "rgba(236, 253, 245, 0.9)" :
-                    recipe.difficulty === "Medium" ? "rgba(255, 251, 235, 0.9)" :
-                    "rgba(254, 242, 242, 0.9)",
-                  color:
-                    recipe.difficulty === "Easy" ? "success.main" :
-                    recipe.difficulty === "Medium" ? "warning.main" :
-                    "error.main",
+                  bgcolor: difficultyColor.bg,
+                  color: difficultyColor.color,
+                  fontSize: 11,
+                  height: 24,
                 }}
-              >
-                <Typography sx={{ fontSize: 11, fontWeight: 500 }}>
-                  {recipe.difficulty}
-                </Typography>
-              </Box>
+              />
             )}
-          </Box>
+          </Stack>
         </Box>
       )}
 
-      <Box sx={{ p: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-          <Avatar
-            src={user.profileImage}
-            alt={user.username}
-            sx={{ width: 24, height: 24, fontSize: 12, bgcolor: "primary.main" }}
-          >
+      <CardContent sx={{ p: 2, flexGrow: 1, display: "flex", flexDirection: "column", "&:last-child": { pb: 2 } }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }}>
+          <Avatar src={user.profileImage} alt={user.username} sx={{ width: 24, height: 24 }}>
             {user.username.charAt(0).toUpperCase()}
           </Avatar>
-          <Typography sx={{ fontSize: 12, color: "grey.500" }}>
+          <Typography variant="caption" color="text.secondary">
             {user.username}
           </Typography>
-          <Typography sx={{ fontSize: 12, color: "grey.300" }}>·</Typography>
-          <Typography sx={{ fontSize: 12, color: "grey.400" }}>
+          <Typography variant="caption" color="grey.300">
+            &middot;
+          </Typography>
+          <Typography variant="caption" color="grey.400">
             {recipe.createdAt}
           </Typography>
-        </Box>
+        </Stack>
 
-        {recipe.title && (
-          <Typography
-            sx={{
-              fontSize: 15,
-              fontWeight: 600,
-              color: "grey.900",
-              mb: 0.5,
-            }}
-          >
+        {!!recipe.title && (
+          <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5, fontSize: 15 }}>
             {recipe.title}
           </Typography>
         )}
         <Typography
+          variant="body2"
+          color="text.secondary"
           sx={{
-            fontSize: 13,
-            color: "grey.600",
-            lineHeight: 1.6,
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
-            mb: 2,
+            fontSize: 13,
+            lineHeight: 1.6,
+            mb: 1.5,
           }}
         >
           {recipe.content}
         </Typography>
 
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            pt: 1.5,
-            borderTop: "1px solid",
-            borderColor: "grey.100",
-          }}
-        >
-          <Box
-            onClick={handleLikeClick}
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ mt: "auto", pt: 1, borderTop: "1px solid", borderColor: "grey.50" }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.5}
+            onClick={(event) => void handleLikeClick(event)}
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 0.5,
               cursor: userId && token ? "pointer" : "default",
               opacity: isLiking ? 0.6 : 1,
-              transition: "opacity 0.2s",
-              "&:hover .icon": userId && token ? { color: "error.light" } : {},
             }}
           >
-            <Heart
-              className="icon"
-              size={17}
-              fill={isLikedByUser ? "#ef4444" : "none"}
-              style={{
-                color: isLikedByUser ? "#ef4444" : "#9ca3af",
-                transition: "all 0.2s",
-              }}
-            />
-            <Typography sx={{ fontSize: 12, color: "grey.400" }}>
+            {isLikedByUser ? (
+              <Favorite sx={{ fontSize: 17, color: "error.main" }} />
+            ) : (
+              <FavoriteBorder
+                sx={{
+                  fontSize: 17,
+                  color: "grey.400",
+                  "&:hover": { color: userId && token ? "error.light" : "grey.400" },
+                }}
+              />
+            )}
+            <Typography variant="caption" sx={{ color: isLikedByUser ? "error.main" : "grey.500" }}>
               {likesCount}
             </Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, cursor: "pointer", "&:hover .icon": { color: "warning.light" } }}>
-            <MessageCircle className="icon" size={17} style={{ color: "#9ca3af", transition: "color 0.2s" }} />
-            <Typography sx={{ fontSize: 12, color: "grey.400" }}>
+          </Stack>
+
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ cursor: "pointer" }}>
+            <ChatBubbleOutline sx={{ fontSize: 17, color: "grey.400" }} />
+            <Typography variant="caption" color="grey.500">
               {recipe.commentsCount}
             </Typography>
-          </Box>
-        </Box>
-      </Box>
-    </Paper>
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 };
 

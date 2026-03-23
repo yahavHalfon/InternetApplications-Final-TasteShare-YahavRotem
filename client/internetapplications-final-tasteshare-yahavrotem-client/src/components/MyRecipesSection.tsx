@@ -1,8 +1,17 @@
 import { useEffect, useState } from "react";
-import { ChefHat, Grid3X3 } from "lucide-react";
+import {
+  Box,
+  CircularProgress,
+  Grid,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  Typography,
+} from "@mui/material";
+import { GridView, Restaurant } from "@mui/icons-material";
 import { API_BASE_URL } from "../config/env";
 import { recipeService, type ApiRecipe } from "../services/recipeService";
-import "./MyRecipesSection.css";
 
 type MyRecipesSectionProps = {
   token: string;
@@ -39,43 +48,113 @@ function MyRecipesSection({ token }: MyRecipesSectionProps) {
   }, [token]);
 
   return (
-    <section className="my-recipes-section" aria-label="My Recipes">
-      <div className="my-recipes-tabs" role="tablist" aria-label="Profile tabs">
-        <button type="button" className="my-recipes-tab my-recipes-tab-active" role="tab" aria-selected="true">
-          <Grid3X3 size={15} />
-          <span>My Recipes</span>
-        </button>
-      </div>
+    <Paper
+      component="section"
+      aria-label="My Recipes"
+      elevation={0}
+      sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", overflow: "hidden" }}
+    >
+      <Tabs
+        value={0}
+        sx={{
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          "& .MuiTab-root": { textTransform: "none", fontSize: 13, fontWeight: 500 },
+          "& .Mui-selected": { color: "text.primary" },
+          "& .MuiTabs-indicator": { bgcolor: "primary.main" },
+        }}
+      >
+        <Tab icon={<GridView sx={{ fontSize: 16 }} />} iconPosition="start" label="My Recipes" />
+      </Tabs>
 
-      <div className="my-recipes-content">
-        {isLoading ? <div className="my-recipes-loading">Loading recipes...</div> : null}
+      <Box sx={{ p: 2.5 }}>
+        {isLoading ? (
+          <Stack alignItems="center" sx={{ py: 6 }}>
+            <CircularProgress size={28} />
+          </Stack>
+        ) : null}
 
-        {error ? <p className="my-recipes-error">{error}</p> : null}
+        {!isLoading && !!error ? (
+          <Typography color="error.main">{error}</Typography>
+        ) : null}
 
         {!isLoading && !error && recipes.length === 0 ? (
-          <div className="my-recipes-empty">
-            <div className="my-recipes-empty-icon" aria-hidden="true">
-              <ChefHat size={28} />
-            </div>
-            <p className="my-recipes-empty-title">No recipes yet</p>
-            <p className="my-recipes-empty-subtitle">Your published recipes will appear here.</p>
-          </div>
+          <Stack alignItems="center" sx={{ py: 8 }}>
+            <Box
+              sx={{
+                width: 64,
+                height: 64,
+                borderRadius: "50%",
+                bgcolor: "grey.50",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mb: 2,
+              }}
+            >
+              <Restaurant sx={{ fontSize: 28, color: "grey.400" }} />
+            </Box>
+            <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+              No recipes yet
+            </Typography>
+            <Typography variant="body2" color="grey.400" sx={{ mt: 0.5 }}>
+              Your published recipes will appear here.
+            </Typography>
+          </Stack>
         ) : null}
 
         {!isLoading && !error && recipes.length > 0 ? (
-          <div className="my-recipes-grid">
+          <Grid container spacing={1.5}>
             {recipes.map((recipe) => (
-              <article key={recipe._id} className="my-recipes-tile" aria-label={recipe.title}>
-                <img src={toApiAssetUrl(recipe.image)} alt={recipe.title} loading="lazy" />
-                <div className="my-recipes-tile-overlay">
-                  <p>{recipe.title}</p>
-                </div>
-              </article>
+              <Grid key={recipe._id} size={{ xs: 6, md: 4, lg: 3 }}>
+                <Box
+                  sx={{
+                    position: "relative",
+                    aspectRatio: "1",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                    bgcolor: "grey.100",
+                    "&:hover [data-slot='tile-overlay']": { opacity: 1 },
+                    "&:hover [data-slot='tile-image']": { transform: "scale(1.05)" },
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={toApiAssetUrl(recipe.image)}
+                    alt={recipe.title}
+                    loading="lazy"
+                    data-slot="tile-image"
+                    sx={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      transition: "transform 0.3s",
+                    }}
+                  />
+                  <Box
+                    data-slot="tile-overlay"
+                    sx={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.2), transparent)",
+                      opacity: 0,
+                      transition: "opacity 0.2s",
+                      display: "flex",
+                      alignItems: "flex-end",
+                      p: 1.5,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: "common.white", fontWeight: 500 }}>
+                      {recipe.title}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
             ))}
-          </div>
+          </Grid>
         ) : null}
-      </div>
-    </section>
+      </Box>
+    </Paper>
   );
 }
 

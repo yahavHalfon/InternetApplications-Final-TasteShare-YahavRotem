@@ -1,29 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
-import { Navigate, Route, Routes, useParams } from "react-router-dom";
+import type { CredentialResponse } from "@react-oauth/google";
+import { useNavigate } from "react-router-dom";
 import slugify from "slugify";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Camera,
-  Check,
-  ChefHat,
-  Eye,
-  EyeOff,
-  Link2,
-  Lock,
-  Mail,
-  MapPin,
-  User,
-} from "lucide-react";
+import { Box, Paper, Typography } from "@mui/material";
 import { GOOGLE_CLIENT_ID } from "./config/env";
 import { authService, type AuthSession } from "./services/authService";
-import Feed from "./pages/Feed";
-import CreateRecipe from "./pages/CreateRecipe";
-import Profile from "./pages/Profile";
-import RecipeDetails from "./pages/RecipeDetails";
-import Navbar from "./components/Navbar";
-import "./App.css";
+import AuthScreen from "./components/AuthScreen";
+import MainLayout from "./components/MainLayout";
 
 type AuthMode = "login" | "register";
 type RegisterStep = 1 | 2;
@@ -40,44 +23,12 @@ type RegisterCredentials = {
 
 const ACCESS_TOKEN_STORAGE_KEY = "accessToken";
 const REFRESH_TOKEN_STORAGE_KEY = "refreshToken";
+
 const normalizeUsername = (value: string): string =>
   slugify(value, { lower: true, strict: true, trim: true, replacement: "" }).slice(0, 30);
 
-const authRoutes = [
-  {
-    path: "/feed",
-    title: "Feed",
-    description: "Your personalized recipe stream is ready.",
-  },
-  {
-    path: "/search",
-    title: "AI Search",
-    description: "Find recipes with smart ingredient and cuisine matching.",
-  },
-  {
-    path: "/create",
-    title: "Add Recipe",
-    description: "Share your next recipe with the TasteShare community.",
-  },
-  {
-    path: "/profile",
-    title: "Profile",
-    description: "Manage your profile details and personal cooking identity.",
-  },
-] as const;
-
-const RecipeDetailsRoute = () => {
-  const params = useParams();
-  const recipeId = params.id;
-
-  if (!recipeId) {
-    return <Navigate to="/feed" replace />;
-  }
-
-  return <RecipeDetails recipeId={recipeId} />;
-};
-
-function App() {
+const App = () => {
+  const navigate = useNavigate();
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [registerStep, setRegisterStep] = useState<RegisterStep>(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -91,6 +42,7 @@ function App() {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!notification) {
@@ -106,7 +58,7 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (avatarPreviewUrl) {
+      if (avatarPreviewUrl.startsWith("blob:")) {
         URL.revokeObjectURL(avatarPreviewUrl);
       }
     };
@@ -184,6 +136,7 @@ function App() {
       });
       saveSession(authSession);
       notify("success", "You are now logged in.");
+      navigate("/feed", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Login failed.");
     } finally {
@@ -212,7 +165,7 @@ function App() {
     }
 
     const formData = new FormData(event.currentTarget);
-    const name = String(formData.get("name") ?? "").trim();
+    const name = String(formData.get("fullName") ?? "").trim();
     const username = String(formData.get("username") ?? "").trim();
     const bio = String(formData.get("bio") ?? "").trim();
     const location = String(formData.get("location") ?? "").trim();
@@ -235,6 +188,7 @@ function App() {
       const authSession = await authService.register(registerFormData);
       saveSession(authSession);
       notify("success", "Your account has been created successfully.");
+      navigate("/feed", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Registration failed.");
     } finally {
@@ -248,9 +202,10 @@ function App() {
       return;
     }
 
-    if (avatarPreviewUrl) {
+    if (avatarPreviewUrl.startsWith("blob:")) {
       URL.revokeObjectURL(avatarPreviewUrl);
     }
+
     setAvatarFile(file);
     setAvatarPreviewUrl(URL.createObjectURL(file));
   };
@@ -267,6 +222,7 @@ function App() {
       const authSession = await authService.googleSignIn(credential);
       saveSession(authSession);
       notify("success", "Google sign-in completed successfully.");
+      navigate("/feed", { replace: true });
     } catch (error) {
       notify("error", error instanceof Error ? error.message : "Google sign-in failed.");
     } finally {
@@ -277,27 +233,6 @@ function App() {
   const handleGoogleError = () => {
     setIsGoogleLoading(false);
     notify("error", "Google sign-in failed.");
-  };
-
-  const renderGoogleLogin = () => {
-    if (!GOOGLE_CLIENT_ID) {
-      return <p className="google-config-warning">Google sign-in is not configured.</p>;
-    }
-
-    return (
-      <>
-        <div className="google-login-wrap">
-          <GoogleLogin
-            onSuccess={(response: CredentialResponse) => {
-              setIsGoogleLoading(true);
-              void handleGoogleSuccess(response);
-            }}
-            onError={handleGoogleError}
-          />
-        </div>
-        {isGoogleLoading ? <p className="google-loading">Signing in with Google...</p> : null}
-      </>
-    );
   };
 
   const handleLogout = async () => {
@@ -312,347 +247,92 @@ function App() {
     notify("success", "You have been logged out.");
   };
 
+  const renderNotification = () => {
+    if (!notification) {
+      return null;
+    }
+
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          px: 2,
+          py: 1.25,
+          borderRadius: 2,
+          mb: 2,
+          border: "1px solid",
+          borderColor: notification.type === "success" ? "success.light" : "error.light",
+          bgcolor: notification.type === "success" ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+          color: notification.type === "success" ? "success.dark" : "error.main",
+        }}
+      >
+        <Typography variant="body2">{notification.message}</Typography>
+      </Paper>
+    );
+  };
+
   if (isInitializing) {
     return (
-      <div className="auth-page">
-        <div className="auth-card auth-card-loading">Restoring your session...</div>
-      </div>
+      <Box sx={{ minHeight: "100vh", bgcolor: "background.default", display: "flex", alignItems: "center", justifyContent: "center", p: 4 }}>
+        <Paper elevation={0} sx={{ borderRadius: 4, border: "1px solid", borderColor: "divider", px: 4, py: 3 }}>
+          <Typography variant="body1" color="text.secondary">
+            Restoring your session...
+          </Typography>
+        </Paper>
+      </Box>
     );
   }
 
   if (session) {
     return (
-      <div className="app-shell">
-        <Navbar onLogout={() => void handleLogout()} />
-
-        <main className="app-content">
-          {notification ? (
-            <div className={`notification notification-${notification.type}`}>{notification.message}</div>
-          ) : null}
-
-          <Routes>
-            <Route path="/" element={<Navigate to="/feed" replace />} />
-            <Route path="/recipes/:id" element={<RecipeDetailsRoute />} />
-            {authRoutes.map((route) => (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={
-                  route.path === "/feed" ? (
-                    <Feed token={session.token} userId={session.user.id} />
-                  ) : route.path === "/create" ? (
-                    <CreateRecipe token={session.token} />
-                  ) : route.path === "/profile" ? (
-                    <Profile
-                      token={session.token}
-                      initialUser={session.user}
-                      onProfileUpdated={(updatedUser) => {
-                        setSession((prevSession) => {
-                          if (!prevSession) {
-                            return prevSession;
-                          }
-                          return {
-                            ...prevSession,
-                            user: updatedUser,
-                          };
-                        });
-                      }}
-                    />
-                  ) : (
-                    <section className="app-view-card">
-                      <h1>{route.title}</h1>
-                      <p>{route.description}</p>
-                    </section>
-                  )
-                }
-              />
-            ))}
-            <Route path="*" element={<Navigate to="/feed" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <MainLayout
+        session={session}
+        notification={renderNotification()}
+        onLogout={() => void handleLogout()}
+        onProfileUpdated={(updatedUser) => {
+          setSession((prevSession) => {
+            if (!prevSession) {
+              return prevSession;
+            }
+            return {
+              ...prevSession,
+              user: updatedUser,
+            };
+          });
+        }}
+      />
     );
   }
 
-  const isRegisterStepTwo = authMode === "register" && registerStep === 2;
-
   return (
-    <div className="auth-page">
-      {notification ? (
-        <div className={`notification notification-${notification.type}`}>{notification.message}</div>
-      ) : null}
-
-      <div className={`auth-card ${isRegisterStepTwo ? "auth-card-wide" : ""}`}>
-        <div className="brand-block">
-          <div className="brand-icon">
-            <ChefHat size={28} color="#ffffff" />
-          </div>
-          <h1 className="brand-title">TasteShare</h1>
-          <p className="brand-subtitle">
-            {authMode === "login"
-              ? "Welcome back, chef!"
-              : registerStep === 1
-                ? "Create your account"
-                : "Set up your chef profile"}
-          </p>
-        </div>
-
-        {authMode === "login" ? (
-          <div>
-            <form className="auth-form" onSubmit={handleLogin}>
-              <div className="input-with-icon">
-                <Mail size={17} className="input-icon" />
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email address"
-                  className="auth-input"
-                  required
-                />
-              </div>
-
-              <div className="input-with-icon">
-                <Lock size={17} className="input-icon" />
-                <input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  className="auth-input auth-input-password"
-                  required
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  className="toggle-password"
-                  onClick={() => setShowPassword((value) => !value)}
-                >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-
-              <button type="submit" className="btn-gradient" disabled={isSubmitting}>
-                {isSubmitting ? "Signing in..." : "Sign In"}
-              </button>
-            </form>
-
-            <div className="auth-divider">
-              <div />
-              <span>or</span>
-              <div />
-            </div>
-
-            {renderGoogleLogin()}
-
-            <div className="switch-mode">
-              <span>Don't have an account? </span>
-              <button
-                type="button"
-                className="text-link"
-                onClick={() => {
-                  setAuthMode("register");
-                  setRegisterStep(1);
-                  setRegisterCredentials(null);
-                }}
-              >
-                Sign Up
-              </button>
-            </div>
-          </div>
-        ) : registerStep === 1 ? (
-          <div>
-            <div className="step-indicator">
-              <div className="step-group">
-                <div className="step-circle step-circle-active">1</div>
-                <span className="step-label step-label-active">Account</span>
-              </div>
-              <div className="step-line" />
-              <div className="step-group">
-                <div className="step-circle">2</div>
-                <span className="step-label">Profile</span>
-              </div>
-            </div>
-
-            <form className="auth-form" onSubmit={handleNextRegisterStep}>
-              <div className="input-with-icon">
-                <Mail size={17} className="input-icon" />
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email address"
-                  className="auth-input"
-                  required
-                />
-              </div>
-
-              <div className="input-with-icon">
-                <Lock size={17} className="input-icon" />
-                <input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Create a password"
-                  className="auth-input auth-input-password"
-                  required
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  className="toggle-password"
-                  onClick={() => setShowPassword((value) => !value)}
-                >
-                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                </button>
-              </div>
-
-              <button type="submit" className="btn-gradient">
-                Continue
-                <ArrowRight size={16} />
-              </button>
-            </form>
-
-            <div className="auth-divider">
-              <div />
-              <span>or</span>
-              <div />
-            </div>
-
-            {renderGoogleLogin()}
-
-            <div className="switch-mode">
-              <span>Already have an account? </span>
-              <button
-                type="button"
-                className="text-link"
-                onClick={() => {
-                  setAuthMode("login");
-                  setRegisterStep(1);
-                  setRegisterCredentials(null);
-                }}
-              >
-                Sign In
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div className="step-indicator">
-              <div className="step-group">
-                <div className="step-circle step-circle-active">
-                  <Check size={14} />
-                </div>
-                <span className="step-label step-label-active">Account</span>
-              </div>
-              <div className="step-line" />
-              <div className="step-group">
-                <div className="step-circle step-circle-active">2</div>
-                <span className="step-label step-label-active">Profile</span>
-              </div>
-            </div>
-
-            <form className="profile-form" onSubmit={handleRegister}>
-              <div className="avatar-block">
-                <label htmlFor="profileImage" className="avatar-button">
-                  <div className="avatar-preview">
-                    {avatarPreviewUrl ? <img src={avatarPreviewUrl} alt="Avatar" /> : <User size={32} color="#c4c4c4" />}
-                  </div>
-                  <div className="avatar-camera">
-                    <Camera size={14} color="#ffffff" />
-                  </div>
-                </label>
-                <input
-                  id="profileImage"
-                  name="profileImage"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  style={{ display: "none" }}
-                />
-                <p>{avatarFile ? "Tap to change photo" : "Upload a profile photo"}</p>
-              </div>
-
-              <div>
-                <label>Full Name</label>
-                <div className="input-with-icon">
-                  <User size={17} className="input-icon" />
-                  <input
-                    name="name"
-                    type="text"
-                    placeholder="Your full name"
-                    className="auth-input"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label>Username</label>
-                <div className="input-with-icon input-with-prefix">
-                  <span className="prefix">@</span>
-                  <input
-                    name="username"
-                    type="text"
-                    placeholder="yourname"
-                    className="auth-input auth-input-username"
-                    pattern="[A-Za-z0-9._]*"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label>Bio</label>
-                <div className="bio-wrap">
-                  <textarea
-                    name="bio"
-                    placeholder="Tell the community about yourself, your cooking style, your favorite cuisines..."
-                    rows={3}
-                    maxLength={200}
-                  />
-                </div>
-              </div>
-
-              <div className="grid-two">
-                <div>
-                  <label>Location</label>
-                  <div className="input-with-icon input-small-icon">
-                    <MapPin size={15} className="input-icon" />
-                    <input
-                      name="location"
-                      type="text"
-                      placeholder="City, Country"
-                      className="auth-input"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label>Website</label>
-                  <div className="input-with-icon input-small-icon">
-                    <Link2 size={15} className="input-icon" />
-                    <input
-                      name="website"
-                      type="text"
-                      placeholder="yoursite.com"
-                      className="auth-input"
-                      pattern="https?://.*|[^\s]+\.[^\s]+"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="action-row">
-                <button type="button" className="btn-secondary" onClick={() => setRegisterStep(1)}>
-                  <ArrowLeft size={16} />
-                  Back
-                </button>
-                <button type="submit" className="btn-gradient" disabled={isSubmitting}>
-                  <ChefHat size={16} />
-                  {isSubmitting ? "Creating..." : "Create Account"}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-      </div>
-    </div>
+    <AuthScreen
+      authMode={authMode}
+      registerStep={registerStep}
+      showPassword={showPassword}
+      isSubmitting={isSubmitting}
+      isGoogleLoading={isGoogleLoading}
+      googleClientId={GOOGLE_CLIENT_ID}
+      notification={renderNotification()}
+      avatarFile={avatarFile}
+      avatarPreviewUrl={avatarPreviewUrl}
+      avatarInputRef={avatarInputRef}
+      onTogglePassword={() => setShowPassword((value) => !value)}
+      onSetAuthMode={(mode) => {
+        setAuthMode(mode);
+        setRegisterCredentials(null);
+      }}
+      onSetRegisterStep={(step) => setRegisterStep(step)}
+      onLogin={handleLogin}
+      onNextRegisterStep={handleNextRegisterStep}
+      onRegister={handleRegister}
+      onAvatarChange={handleAvatarChange}
+      onGoogleSignInStart={(response) => {
+        setIsGoogleLoading(true);
+        void handleGoogleSuccess(response);
+      }}
+      onGoogleError={handleGoogleError}
+    />
   );
-}
+};
 
 export default App;

@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Typography, CircularProgress } from "@mui/material";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Box, Typography, CircularProgress, Grid } from "@mui/material";
 import dayjs from "dayjs";
 import RecipeCard from "../components/RecipeCard";
-import RecipeDetailsModal from "../components/RecipeDetailsModal";
+import RecipeDetailModal from "../components/RecipeDetailModal";
 import type { RecipeFeedItem } from "../types/recipe";
 import { API_BASE_URL } from "../config/env";
 import { recipeService } from "../services/recipeService";
@@ -22,12 +22,12 @@ const toApiAssetUrl = (assetPath?: string): string | undefined => {
   return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
 };
 
-interface FeedProps {
+type FeedScreenProps = {
   token?: string;
   userId?: string;
-}
+};
 
-const Feed: React.FC<FeedProps> = ({ token, userId }) => {
+const FeedScreen = ({ token, userId }: FeedScreenProps) => {
   const [recipes, setRecipes] = useState<RecipeFeedItem[]>([]);
   const [usersById, setUsersById] = useState<Record<string, FeedUserView>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -168,15 +168,15 @@ const Feed: React.FC<FeedProps> = ({ token, userId }) => {
   }, [hasMore, isLoading, isLoadingMore, loadRecipes]);
 
   return (
-    <Box sx={{ minHeight: "100vh", p: { xs: 2, md: 4 }, bgcolor: "#f8f8fa" }}>
+    <Box sx={{ minHeight: "100vh", p: { xs: 2, md: 4 }, bgcolor: "background.default" }}>
       <Box sx={{ mb: 4 }}>
         <Typography
           variant="h5"
-          sx={{ fontWeight: 600, color: "grey.900", mb: 0.5, fontFamily: "inherit", fontSize: "24px" }}
+          sx={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, mb: 0.5 }}
         >
           Recipe Feed
         </Typography>
-        <Typography variant="body2" sx={{ color: "#9ca3af", fontFamily: "inherit", fontSize: "14px" }}>
+        <Typography variant="body2" color="text.secondary">
           Discover delicious recipes from the community
         </Typography>
       </Box>
@@ -191,25 +191,20 @@ const Feed: React.FC<FeedProps> = ({ token, userId }) => {
         <Typography sx={{ color: "error.main", mb: 2 }}>{error}</Typography>
       ) : null}
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr", lg: "1fr 1fr 1fr" },
-          gap: 2.5,
-        }}
-      >
+      <Grid container spacing={2.5}>
         {recipes.map((recipe) => (
-          <RecipeCard
-            key={recipe._id}
-            recipe={recipe}
-            user={getRecipeUser(recipe.userID)}
-            token={token}
-            userId={userId}
-            onLikeChange={handleRecipeLikeChange}
-            onRecipeClick={handleRecipeClick}
-          />
+          <Grid key={recipe._id} size={{ xs: 12, md: 6, lg: 4 }}>
+            <RecipeCard
+              recipe={recipe}
+              user={getRecipeUser(recipe.userID)}
+              token={token}
+              userId={userId}
+              onLikeChange={handleRecipeLikeChange}
+              onRecipeClick={handleRecipeClick}
+            />
+          </Grid>
         ))}
-      </Box>
+      </Grid>
 
       {isLoadingMore ? (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 3, mb: 2 }}>
@@ -220,7 +215,7 @@ const Feed: React.FC<FeedProps> = ({ token, userId }) => {
       <Box ref={loadMoreRef} sx={{ height: 1 }} />
 
       {selectedRecipe && (
-        <RecipeDetailsModal
+        <RecipeDetailModal
           recipe={selectedRecipe}
           open={isModalOpen}
           onClose={handleCloseModal}
@@ -233,4 +228,4 @@ const Feed: React.FC<FeedProps> = ({ token, userId }) => {
   );
 };
 
-export default Feed;
+export default FeedScreen;
