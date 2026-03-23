@@ -300,7 +300,7 @@ function MyRecipesSection({ token }: MyRecipesSectionProps) {
           </Stack>
         ) : null}
 
-        {!isLoading && !!error ? (
+        {!isLoading && error ? (
           <Typography color="error.main">{error}</Typography>
         ) : null}
 

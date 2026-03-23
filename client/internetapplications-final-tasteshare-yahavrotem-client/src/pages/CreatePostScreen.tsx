@@ -73,7 +73,7 @@ const CreatePostScreen = ({ token }: CreatePostScreenProps) => {
 
   const canSubmit =
     !isSubmitting &&
-    !!imageFile &&
+    imageFile &&
     title.trim().length > 0 &&
     description.trim().length > 0 &&
     ingredients.some((item) => item.trim().length > 0) &&
