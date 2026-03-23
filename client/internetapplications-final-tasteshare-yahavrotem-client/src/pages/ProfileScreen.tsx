@@ -11,6 +11,7 @@ import {
   Button,
   CircularProgress,
   IconButton,
+  Link,
   Paper,
   Stack,
   TextField,
@@ -40,6 +41,15 @@ const toApiAssetUrl = (assetPath?: string): string => {
     return "";
   }
   return assetPath.startsWith("/") ? `${API_BASE_URL}${assetPath}` : assetPath;
+};
+
+const toExternalUrl = (value?: string): string => {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 };
 
 const mapApiUserToAuthUser = (apiUser: ApiUser, fallback: AuthUser): AuthUser => ({
@@ -337,7 +347,16 @@ const ProfileScreen = ({ token, initialUser, onProfileUpdated }: ProfileScreenPr
                 {profile.website ? (
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <LinkIcon sx={{ fontSize: 14, color: "primary.main" }} />
-                    <Typography variant="caption" color="primary.main">{profile.website}</Typography>
+                    <Link
+                      href={toExternalUrl(profile.website)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="caption"
+                      underline="hover"
+                      sx={{ color: "primary.main", wordBreak: "break-all" }}
+                    >
+                      {profile.website}
+                    </Link>
                   </Stack>
                 ) : null}
               </Stack>
