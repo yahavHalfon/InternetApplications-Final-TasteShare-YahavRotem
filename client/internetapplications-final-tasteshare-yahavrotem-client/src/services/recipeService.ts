@@ -12,6 +12,33 @@ export type ApiRecipe = {
   createdAt: string;
 };
 
+export type ApiRecipeDetails = {
+  id: string;
+  title: string;
+  image: string;
+  description: string;
+  createdAt: string;
+  createdAtLabel: string;
+  badges: {
+    cookTime: string;
+    servings: number;
+    difficulty: "Easy" | "Medium" | "Advanced";
+  };
+  stats: {
+    likesCount: number;
+    commentsCount: number;
+  };
+  author: {
+    id: string;
+    name: string;
+    username: string;
+    avatarUrl: string;
+  };
+  ingredients: string[];
+  instructions: string[];
+  likedBy: string[];
+};
+
 export type PaginatedRecipesResponse = {
   data: ApiRecipe[];
   hasMore: boolean;
@@ -78,6 +105,17 @@ const createRecipe = async (payload: CreateRecipePayload, token: string): Promis
 
 export const recipeService = {
   getRecipes,
+  getRecipeById: async (recipeId: string): Promise<ApiRecipeDetails> => {
+    const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`);
+    if (!response.ok) {
+      const fallbackMessage = "Failed to load recipe details.";
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(data?.error || fallbackMessage);
+    }
+
+    return (await response.json()) as ApiRecipeDetails;
+  },
+
   getMyRecipes: async (token: string): Promise<UserRecipesResponse> => {
     const response = await fetch(`${API_BASE_URL}/recipes/me`, {
       headers: {

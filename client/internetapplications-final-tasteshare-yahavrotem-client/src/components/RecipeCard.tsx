@@ -8,6 +8,7 @@ interface RecipeCardWithActionsProps extends RecipeCardProps {
   userId?: string;
   token?: string;
   onLikeChange?: (recipeId: string, likedBy: string[]) => void;
+  onRecipeClick?: (recipeId: string) => void;
 }
 
 const RecipeCard: React.FC<RecipeCardWithActionsProps> = ({
@@ -16,12 +17,12 @@ const RecipeCard: React.FC<RecipeCardWithActionsProps> = ({
   userId,
   token,
   onLikeChange,
+  onRecipeClick,
 }) => {
   const [isLiking, setIsLiking] = useState(false);
-  const [likedBy, setLikedBy] = useState(recipe.likedBy);
 
-  const isLikedByUser = userId ? likedBy.includes(userId) : false;
-  const likesCount = likedBy.length;
+  const isLikedByUser = userId ? recipe.likedBy.includes(userId) : false;
+  const likesCount = recipe.likedBy.length;
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -33,7 +34,6 @@ const RecipeCard: React.FC<RecipeCardWithActionsProps> = ({
     try {
       const updatedRecipe = await recipeService.toggleLike(recipe._id, token);
       const newLikedBy = updatedRecipe.likedBy || [];
-      setLikedBy(newLikedBy);
       onLikeChange?.(recipe._id, newLikedBy);
     } catch (error) {
       console.error("Failed to toggle like:", error);
@@ -45,7 +45,9 @@ const RecipeCard: React.FC<RecipeCardWithActionsProps> = ({
   return (
     <Paper
       variant="outlined"
+      onClick={() => onRecipeClick?.(recipe._id)}
       sx={{
+        cursor: "pointer",
         borderRadius: 2,
         overflow: "hidden",
         borderColor: "grey.200",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import slugify from "slugify";
 import {
   ArrowLeft,
@@ -21,6 +21,7 @@ import { authService, type AuthSession } from "./services/authService";
 import Feed from "./pages/Feed";
 import CreateRecipe from "./pages/CreateRecipe";
 import Profile from "./pages/Profile";
+import RecipeDetails from "./pages/RecipeDetails";
 import Navbar from "./components/Navbar";
 import "./App.css";
 
@@ -64,6 +65,18 @@ const authRoutes = [
     description: "Manage your profile details and personal cooking identity.",
   },
 ] as const;
+
+const RecipeDetailsRoute = () => {
+  const params = useParams();
+  const recipeId = params.id;
+
+  if (!recipeId) {
+    return <Navigate to="/feed" replace />;
+  }
+
+  return <RecipeDetails recipeId={recipeId} />;
+};
+
 function App() {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [registerStep, setRegisterStep] = useState<RegisterStep>(1);
@@ -319,6 +332,7 @@ function App() {
 
           <Routes>
             <Route path="/" element={<Navigate to="/feed" replace />} />
+            <Route path="/recipes/:id" element={<RecipeDetailsRoute />} />
             {authRoutes.map((route) => (
               <Route
                 key={route.path}

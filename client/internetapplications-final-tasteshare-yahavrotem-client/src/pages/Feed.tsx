@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import dayjs from "dayjs";
 import RecipeCard from "../components/RecipeCard";
+import RecipeDetailsModal from "../components/RecipeDetailsModal";
 import type { RecipeFeedItem } from "../types/recipe";
 import { API_BASE_URL } from "../config/env";
 import { recipeService } from "../services/recipeService";
@@ -33,6 +34,8 @@ const Feed: React.FC<FeedProps> = ({ token, userId }) => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeFeedItem | null>(null);
   const pageRef = useRef(1);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const usersCacheRef = useRef<Record<string, FeedUserView>>({});
@@ -41,6 +44,24 @@ const Feed: React.FC<FeedProps> = ({ token, userId }) => {
     _id: userId,
     ...(usersById[userId] ?? { username: "Unknown User" }),
   });
+
+  const handleRecipeClick = (recipeId: string) => {
+    const clickedRecipe = recipes.find((recipe) => recipe._id === recipeId) ?? null;
+    setSelectedRecipe(clickedRecipe);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedRecipe(null);
+  };
+
+  const handleRecipeLikeChange = (recipeId: string, likedBy: string[]) => {
+    setRecipes((prev) =>
+      prev.map((r) => (r._id === recipeId ? { ...r, likedBy, likesCount: likedBy.length } : r))
+    );
+    setSelectedRecipe((prev) => (prev && prev._id === recipeId ? { ...prev, likedBy, likesCount: likedBy.length } : prev));
+  };
 
   const resolveUsers = useCallback(async (userIds: string[]) => {
     const uniqueIds = Array.from(new Set(userIds));
@@ -184,11 +205,8 @@ const Feed: React.FC<FeedProps> = ({ token, userId }) => {
             user={getRecipeUser(recipe.userID)}
             token={token}
             userId={userId}
-            onLikeChange={(recipeId, likedBy) => {
-              setRecipes((prev) =>
-                prev.map((r) => (r._id === recipeId ? { ...r, likedBy } : r))
-              );
-            }}
+            onLikeChange={handleRecipeLikeChange}
+            onRecipeClick={handleRecipeClick}
           />
         ))}
       </Box>
@@ -201,6 +219,16 @@ const Feed: React.FC<FeedProps> = ({ token, userId }) => {
 
       <Box ref={loadMoreRef} sx={{ height: 1 }} />
 
+      {selectedRecipe && (
+        <RecipeDetailsModal
+          recipe={selectedRecipe}
+          open={isModalOpen}
+          onClose={handleCloseModal}
+          token={token}
+          userId={userId}
+          onLikeChange={handleRecipeLikeChange}
+        />
+      )}
     </Box>
   );
 };

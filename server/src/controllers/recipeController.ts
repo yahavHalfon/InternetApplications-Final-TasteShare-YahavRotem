@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import BaseController from "./baseController";
 
 import CommentModel from "../model/commentModel";
+import User from "../model/userModel";
 import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 
@@ -42,6 +43,30 @@ const parseStringArray = (value: unknown): string[] => {
     return [];
 };
 
+const formatCreatedAt = (value: Date): string => {
+    const now = Date.now();
+    const createdAtMs = new Date(value).getTime();
+    const diffMs = Math.max(0, now - createdAtMs);
+    const minuteMs = 60 * 1000;
+    const hourMs = 60 * minuteMs;
+    const dayMs = 24 * hourMs;
+
+    if (diffMs < minuteMs) {
+        return "Just now";
+    }
+    if (diffMs < hourMs) {
+        return `${Math.floor(diffMs / minuteMs)}m ago`;
+    }
+    if (diffMs < dayMs) {
+        return `${Math.floor(diffMs / hourMs)}h ago`;
+    }
+    return new Date(value).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
 class RecipeController extends BaseController<IRecipe> {
     constructor() {
         super(Recipe);
@@ -64,6 +89,51 @@ class RecipeController extends BaseController<IRecipe> {
                 limit,
                 total,
                 hasMore: skip + data.length < total,
+            });
+        } catch (error) {
+            return this.handleError(res, error);
+        }
+    }
+
+    async getById(req: Request, res: Response) {
+        try {
+            const recipe = await Recipe.findById(req.params.id).lean();
+            if (!recipe) {
+                return res.status(404).json({ error: "Recipe not found" });
+            }
+
+            const [author, commentsCount] = await Promise.all([
+                User.findById(recipe.userId).select("name username avatarUrl").lean(),
+                CommentModel.countDocuments({ recipeId: recipe._id }),
+            ]);
+
+            const authorName = author?.name?.trim() || author?.username?.trim() || "Unknown User";
+
+            return res.status(200).json({
+                id: String(recipe._id),
+                title: recipe.title,
+                image: recipe.image,
+                description: recipe.description,
+                createdAt: recipe.createdAt,
+                createdAtLabel: formatCreatedAt(recipe.createdAt),
+                badges: {
+                    cookTime: recipe.cookTime,
+                    servings: recipe.servings,
+                    difficulty: recipe.difficulty,
+                },
+                stats: {
+                    likesCount: recipe.likedBy.length,
+                    commentsCount,
+                },
+                author: {
+                    id: author ? String(author._id) : "",
+                    name: authorName,
+                    username: author?.username?.trim() || "",
+                    avatarUrl: author?.avatarUrl ?? "",
+                },
+                ingredients: recipe.ingredients,
+                instructions: recipe.instructions,
+                likedBy: recipe.likedBy.map((id) => String(id)),
             });
         } catch (error) {
             return this.handleError(res, error);
