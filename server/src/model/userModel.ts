@@ -20,7 +20,6 @@ const userSchema = new Schema<IUser>(
         email: {
             type: String,
             required: true,
-            unique: true,
             trim: true,
             lowercase: true,
         },
@@ -41,6 +40,7 @@ const userSchema = new Schema<IUser>(
             type: String,
             default: "",
             trim: true,
+            lowercase: true,
         },
         avatarUrl: {
             type: String,
@@ -75,5 +75,9 @@ const userSchema = new Schema<IUser>(
 );
 
 userSchema.path("savedRecipes").default(() => []);
+
+userSchema.index({ email: 1 }, { unique: true });
+
+userSchema.index({ username: 1 }, { unique: true });
 
 export default model<IUser>("User", userSchema);

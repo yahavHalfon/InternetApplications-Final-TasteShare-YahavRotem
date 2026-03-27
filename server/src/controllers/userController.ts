@@ -3,6 +3,12 @@ import type { IUser } from "../model/userModel";
 import BaseController from "./baseController";
 import type { Response } from "express";
 import type { AuthRequest } from "../middleware/authMiddleware";
+import slugify from "slugify";
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeUsername = (value: string): string =>
+    slugify(value, { lower: true, strict: true, trim: true, replacement: "" }).slice(0, 30);
 
 class UserController extends BaseController<IUser> {
     constructor() {
@@ -50,11 +56,46 @@ class UserController extends BaseController<IUser> {
                 return res.status(404).json({ error: "User not found" });
             }
 
+            const nextEmail = typeof req.body.email === "string"
+                ? req.body.email.trim().toLowerCase()
+                : undefined;
+            const nextUsername = typeof req.body.username === "string"
+                ? normalizeUsername(req.body.username)
+                : undefined;
+
+            if (nextEmail !== undefined && !emailPattern.test(nextEmail)) {
+                return res.status(400).json({ error: "Invalid email format" });
+            }
+
+            if (nextUsername !== undefined && !nextUsername) {
+                return res.status(400).json({ error: "Username is required" });
+            }
+
+            const [existingByEmail, existingByUsername] = await Promise.all([
+                nextEmail && nextEmail !== user.email
+                    ? User.findOne({ email: nextEmail, _id: { $ne: user._id } }).select("_id").lean()
+                    : Promise.resolve(null),
+                nextUsername && nextUsername !== user.username
+                    ? User.findOne({ username: nextUsername, _id: { $ne: user._id } }).select("_id").lean()
+                    : Promise.resolve(null),
+            ]);
+
+            if (existingByEmail) {
+                return res.status(409).json({ error: "User already exists" });
+            }
+
+            if (existingByUsername) {
+                return res.status(409).json({ error: "Username already exists" });
+            }
+
             if (typeof req.body.name === "string") {
                 user.name = req.body.name.trim();
             }
-            if (typeof req.body.username === "string") {
-                user.username = req.body.username.trim();
+            if (nextEmail !== undefined) {
+                user.email = nextEmail;
+            }
+            if (nextUsername !== undefined) {
+                user.username = nextUsername;
             }
             if (typeof req.body.bio === "string") {
                 user.bio = req.body.bio.trim();
@@ -69,6 +110,16 @@ class UserController extends BaseController<IUser> {
             const updatedUser = await user.save();
             return res.status(200).json(this.toPublicUser(updatedUser));
         } catch (error) {
+            const mongoError = error as { code?: number; keyPattern?: Record<string, number> };
+            if (mongoError.code === 11000) {
+                if (mongoError.keyPattern?.email) {
+                    return res.status(409).json({ error: "User already exists" });
+                }
+                if (mongoError.keyPattern?.username) {
+                    return res.status(409).json({ error: "Username already exists" });
+                }
+                return res.status(409).json({ error: "Duplicate value" });
+            }
             return this.handleError(res, error);
         }
     }

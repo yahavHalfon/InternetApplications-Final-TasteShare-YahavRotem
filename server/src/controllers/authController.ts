@@ -106,18 +106,30 @@ export const register = async (req: Request, res: Response) => {
     if (password.length < 8) {
         return sendError(400, "Password must be at least 8 characters", res);
     }
+    if (!username) {
+        return sendError(400, "Username is required", res);
+    }
+
     try {
-        const user = await User.findOne({ email });
-        if (user) {
+        const [existingByEmail, existingByUsername] = await Promise.all([
+            User.findOne({ email }).select("_id").lean(),
+            User.findOne({ username }).select("_id").lean(),
+        ]);
+
+        if (existingByEmail) {
             return sendError(409, "User already exists", res);
         }
+        if (existingByUsername) {
+            return sendError(409, "Username already exists", res);
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         const newUser = new User({
             email,
             password: hashedPassword,
             name,
-            username: username || normalizeUsername(name || email.split("@")[0]),
+            username,
             bio,
             location,
             website,
@@ -129,6 +141,16 @@ export const register = async (req: Request, res: Response) => {
         await savedUser.save();
         res.status(201).json(createAuthResponse(savedUser, tokens));
     } catch (err) {
+        const mongoError = err as { code?: number; keyPattern?: Record<string, number> };
+        if (mongoError.code === 11000) {
+            if (mongoError.keyPattern?.email) {
+                return sendError(409, "User already exists", res);
+            }
+            if (mongoError.keyPattern?.username) {
+                return sendError(409, "Username already exists", res);
+            }
+            return sendError(409, "User already exists", res);
+        }
         return sendError(400, err instanceof Error ? err.message : "Error registering user", res);
     }
 };
