@@ -1,6 +1,6 @@
 import { Suspense, lazy, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { Box, CircularProgress, Paper, Typography } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 import { RecipeDetailRoute } from "../app/routes";
 import { appRoutes } from "../app/routeConfig";
 import type { AuthSession, AuthUser } from "../services/authService";
@@ -9,6 +9,7 @@ import Sidebar from "./Sidebar";
 const FeedScreen = lazy(() => import("../pages/FeedScreen"));
 const CreatePostScreen = lazy(() => import("../pages/CreatePostScreen"));
 const ProfileScreen = lazy(() => import("../pages/ProfileScreen"));
+const AISearchScreen = lazy(() => import("../pages/AISearchScreen"));
 
 type MainLayoutProps = {
   session: AuthSession;
@@ -51,13 +52,10 @@ function MainLayout({ session, notification, onLogout, onProfileUpdated }: MainL
                     <CreatePostScreen token={session.token} />
                   ) : route.path === "/profile" ? (
                     <ProfileScreen token={session.token} initialUser={session.user} onProfileUpdated={onProfileUpdated} />
+                  ) : route.path === "/search" ? (
+                    <AISearchScreen token={session.token} />
                   ) : (
-                    <Paper elevation={0} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 3, p: 3 }}>
-                      <Typography variant="h5" sx={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, mb: 1 }}>
-                        {route.title}
-                      </Typography>
-                      <Typography color="text.secondary">{route.description}</Typography>
-                    </Paper>
+                    null
                   )}
                 </Suspense>
               }

@@ -52,6 +52,11 @@ export type UserRecipesResponse = {
   data: ApiRecipe[];
 };
 
+export type SearchRecipesResponse = {
+  data: (ApiRecipe & { commentsCount?: number })[];
+  query: string;
+};
+
 export type CreateRecipePayload = {
   image: File;
   title: string;
@@ -118,6 +123,25 @@ const createRecipe = async (payload: CreateRecipePayload, token: string): Promis
   return (await response.json()) as ApiRecipe;
 };
 
+const searchRecipes = async (query: string, token: string): Promise<SearchRecipesResponse> => {
+  const response = await fetch(`${API_BASE_URL}/recipes/search`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!response.ok) {
+    const fallbackMessage = "Search failed. Please try again.";
+    const data = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(data?.error || fallbackMessage);
+  }
+
+  return (await response.json()) as SearchRecipesResponse;
+};
+
 export const recipeService = {
   getRecipes,
   getRecipeById: async (recipeId: string): Promise<ApiRecipeDetails> => {
@@ -146,6 +170,7 @@ export const recipeService = {
 
     return (await response.json()) as UserRecipesResponse;
   },
+  searchRecipes,
   createRecipe,
   updateRecipe: async (recipeId: string, payload: UpdateRecipePayload, token: string): Promise<ApiRecipe> => {
     const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`, {

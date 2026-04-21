@@ -13,6 +13,7 @@ export interface IRecipe {
     cookTime: string;
     servings: number;
     difficulty: RecipeDifficulty;
+    embedding: number[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -73,6 +74,11 @@ const recipeSchema = new Schema<IRecipe>(
             type: String,
             enum: ["Easy", "Medium", "Advanced"],
             required: true,
+        },
+        embedding: {
+            type: [Number],
+            default: [],
+            select: false,
         },
     },
     {
