@@ -69,7 +69,7 @@ export type CreateRecipePayload = {
 };
 
 export type UpdateRecipePayload = {
-  image?: string;
+  image?: File;
   title?: string;
   description?: string;
   ingredients?: string[];
@@ -173,13 +173,22 @@ export const recipeService = {
   searchRecipes,
   createRecipe,
   updateRecipe: async (recipeId: string, payload: UpdateRecipePayload, token: string): Promise<ApiRecipe> => {
+    const formData = new FormData();
+    if (payload.image) formData.append("image", payload.image);
+    if (payload.title !== undefined) formData.append("title", payload.title);
+    if (payload.description !== undefined) formData.append("description", payload.description);
+    if (payload.ingredients !== undefined) formData.append("ingredients", JSON.stringify(payload.ingredients));
+    if (payload.instructions !== undefined) formData.append("instructions", JSON.stringify(payload.instructions));
+    if (payload.cookTime !== undefined) formData.append("cookTime", payload.cookTime);
+    if (payload.servings !== undefined) formData.append("servings", String(payload.servings));
+    if (payload.difficulty !== undefined) formData.append("difficulty", payload.difficulty);
+
     const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`, {
       method: "PUT",
       headers: {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(payload),
+      body: formData,
     });
 
     if (!response.ok) {
