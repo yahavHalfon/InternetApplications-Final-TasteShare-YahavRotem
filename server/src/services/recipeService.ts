@@ -3,8 +3,8 @@ import CommentModel from "../model/commentModel";
 import embeddingService from "./embeddingService";
 import { cosineSimilarity } from "../helpers/vectorMath";
 
-const TOP_K_RESULTS = 20;
-const SIMILARITY_THRESHOLD = 0.5;
+const TOP_K_RESULTS = 10;
+const SIMILARITY_THRESHOLD = 0.55;
 
 class RecipeService {
     async searchRecipes(queryText: string) {
