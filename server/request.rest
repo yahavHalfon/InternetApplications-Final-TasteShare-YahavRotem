@@ -1,0 +1,117 @@
+### Register
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+    "email": "test@example.com",
+    "password": "password123"
+}
+
+### Login
+# @name login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+    "email": "test@example.com",
+    "password": "password123"
+}
+
+### Refresh Token
+POST http://localhost:3000/auth/refresh
+Content-Type: application/json
+
+{
+    "refreshToken": "{{login.response.body.refreshToken}}"
+}
+
+### Logout
+POST http://localhost:3000/auth/logout
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+    "refreshToken": "{{login.response.body.refreshToken}}"
+}
+
+### Get all recipes
+GET http://localhost:3000/recipes
+
+### Get recipes
+GET http://localhost:3000/recipes
+
+### Get recipe by ID
+GET http://localhost:3000/recipes/REPLACE_WITH_VALID_ID
+
+### Create a new recipe
+# @name createRecipe
+POST http://localhost:3000/recipes
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+    "title": "My Recipe Title",
+    "description": "This is a recipe description",
+    "image": "https://example.com/recipe.jpg",
+    "ingredients": ["1 cup flour"],
+    "instructions": ["Mix ingredients"],
+    "cookTime": "25 min",
+    "servings": 2,
+    "difficulty": "Easy"
+}
+
+### Update a recipe
+PUT http://localhost:3000/recipes/{{createRecipe.response.body._id}}
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+    "title": "Updated Recipe Title",
+    "description": "Updated recipe description"
+}
+
+### Delete a recipe
+DELETE http://localhost:3000/recipes/{{createRecipe.response.body._id}}
+Authorization: Bearer {{login.response.body.token}}
+
+### Get all comments
+GET http://localhost:3000/comments
+
+### Get comments by recipe
+GET http://localhost:3000/comments?recipeId=REPLACE_WITH_VALID_ID
+
+### Get comment by ID
+GET http://localhost:3000/comments/REPLACE_WITH_VALID_ID
+
+### Create a new comment
+# @name createComment
+POST http://localhost:3000/comments
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+    "recipeId": "{{createRecipe.response.body._id}}",
+    "text": "This is a comment"
+}
+
+### Update a comment
+PUT http://localhost:3000/comments/{{createComment.response.body._id}}
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+    "text": "Updated comment content"
+}
+
+### Delete a comment
+DELETE http://localhost:3000/comments/{{createComment.response.body._id}}
+Authorization: Bearer {{login.response.body.token}}
+
+### Get all users
+GET http://localhost:3000/users
+
+### Get user by ID
+GET http://localhost:3000/users/REPLACE_WITH_VALID_ID
+
+### Delete a user
+DELETE http://localhost:3000/users/REPLACE_WITH_VALID_ID
