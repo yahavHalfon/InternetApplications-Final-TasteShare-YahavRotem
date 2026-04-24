@@ -45,6 +45,15 @@ const parseStringArray = (value: unknown): string[] => {
     return [];
 };
 
+const buildEmbeedingRecipe = (fields: {
+    title: string;
+    description: string;
+    ingredients: string[];
+    cookTime: string;
+    difficulty: string;
+}): string =>
+    `${fields.title} ${fields.description} ${fields.ingredients.join(" ")} ${fields.cookTime} ${fields.difficulty}`;
+
 const formatCreatedAt = (value: Date): string => {
     const now = Date.now();
     const createdAtMs = new Date(value).getTime();
@@ -85,16 +94,17 @@ class RecipeController extends BaseController<IRecipe> {
                 Recipe.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit),
             ]);
 
-            // Fetch comment counts for each recipe
-            const data = await Promise.all(
-                recipes.map(async (recipe) => {
-                    const commentsCount = await CommentModel.countDocuments({ recipeId: recipe._id });
-                    return {
-                        ...recipe.toObject(),
-                        commentsCount,
-                    };
-                })
-            );
+            const recipeIds = recipes.map((r) => r._id);
+            const commentAgg = await CommentModel.aggregate<{ _id: unknown; count: number }>([
+                { $match: { recipeId: { $in: recipeIds } } },
+                { $group: { _id: "$recipeId", count: { $sum: 1 } } },
+            ]);
+            const commentCountMap = new Map(commentAgg.map((e) => [String(e._id), e.count]));
+
+            const data = recipes.map((recipe) => ({
+                ...recipe.toObject(),
+                commentsCount: commentCountMap.get(String(recipe._id)) ?? 0,
+            }));
 
             return res.status(200).json({
                 data,
@@ -246,7 +256,7 @@ class RecipeController extends BaseController<IRecipe> {
             return res.status(400).json({ error: "Invalid difficulty" });
         }
 
-        const textToEmbed = `${title} ${description} ${ingredients.join(" ")} ${cookTime} ${difficulty}`;
+        const textToEmbed = buildEmbeedingRecipe({ title, description, ingredients, cookTime, difficulty });
         let embedding: number[];
         try {
             embedding = await embeddingService.embed(textToEmbed);
@@ -287,13 +297,24 @@ class RecipeController extends BaseController<IRecipe> {
                 return;
             }
 
-            const title = req.body.title ?? recipe.title;
-            const description = req.body.description ?? recipe.description;
-            const ingredients = req.body.ingredients ?? recipe.ingredients;
-            const cookTime = req.body.cookTime ?? recipe.cookTime;
+            const title = typeof req.body.title === "string" ? req.body.title.trim() : recipe.title;
+            const description = typeof req.body.description === "string" ? req.body.description.trim() : recipe.description;
+            const ingredients = req.body.ingredients !== undefined
+                ? parseStringArray(req.body.ingredients)
+                : recipe.ingredients;
+            const instructions = req.body.instructions !== undefined
+                ? parseStringArray(req.body.instructions)
+                : recipe.instructions;
+            const cookTime = typeof req.body.cookTime === "string" ? req.body.cookTime.trim() : recipe.cookTime;
             const difficulty = req.body.difficulty ?? recipe.difficulty;
+            const servings = req.body.servings !== undefined
+                ? Number.parseInt(String(req.body.servings), 10)
+                : recipe.servings;
+            const image = req.file
+                ? `/uploads/recipes/${req.file.filename}`
+                : recipe.image;
 
-            const textToEmbed = `${title} ${description} ${ingredients.join(" ")} ${cookTime} ${difficulty}`;
+            const textToEmbed = buildEmbeedingRecipe({ title, description, ingredients, cookTime, difficulty });
             let embedding: number[];
             try {
                 embedding = await embeddingService.embed(textToEmbed);
@@ -302,7 +323,7 @@ class RecipeController extends BaseController<IRecipe> {
                 return res.status(503).json({ error: "Service temporarily unavailable. Please try again later." });
             }
 
-            req.body.embedding = embedding;
+            req.body = { title, description, ingredients, instructions, cookTime, difficulty, servings, image, embedding };
             return super.put(req, res);
         } catch (error) {
             return this.handleError(res, error);

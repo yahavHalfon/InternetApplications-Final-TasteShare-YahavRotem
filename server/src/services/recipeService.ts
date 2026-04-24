@@ -21,13 +21,17 @@ class RecipeService {
         filtered.sort((a, b) => b.score - a.score);
         const top = filtered.slice(0, TOP_K_RESULTS);
 
-        const results = await Promise.all(
-            top.map(async (recipe) => {
-                const commentsCount = await CommentModel.countDocuments({ recipeId: recipe._id });
-                const { embedding: _embedding, score: _score, ...rest } = recipe;
-                return { ...rest, commentsCount };
-            })
-        );
+        const topIds = top.map((r) => r._id);
+        const commentAgg = await CommentModel.aggregate<{ _id: unknown; count: number }>([
+            { $match: { recipeId: { $in: topIds } } },
+            { $group: { _id: "$recipeId", count: { $sum: 1 } } },
+        ]);
+        const commentCountMap = new Map(commentAgg.map((e) => [String(e._id), e.count]));
+
+        const results = top.map((recipe) => {
+            const { embedding: _embedding, score: _score, ...rest } = recipe;
+            return { ...rest, commentsCount: commentCountMap.get(String(recipe._id)) ?? 0 };
+        });
 
         return results;
     }
@@ -44,12 +48,17 @@ class RecipeService {
                 .limit(TOP_K_RESULTS)
                 .lean();
 
-            const results = await Promise.all(
-                recipes.map(async (recipe) => {
-                    const commentsCount = await CommentModel.countDocuments({ recipeId: recipe._id });
-                    return { ...recipe, commentsCount };
-                })
-            );
+            const recipeIds = recipes.map((r) => r._id);
+            const commentAgg = await CommentModel.aggregate<{ _id: unknown; count: number }>([
+                { $match: { recipeId: { $in: recipeIds } } },
+                { $group: { _id: "$recipeId", count: { $sum: 1 } } },
+            ]);
+            const commentCountMap = new Map(commentAgg.map((e) => [String(e._id), e.count]));
+
+            const results = recipes.map((recipe) => ({
+                ...recipe,
+                commentsCount: commentCountMap.get(String(recipe._id)) ?? 0,
+            }));
 
             return results;
         } catch (error) {
