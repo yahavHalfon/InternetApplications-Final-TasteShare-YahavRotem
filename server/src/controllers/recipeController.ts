@@ -45,14 +45,16 @@ const parseStringArray = (value: unknown): string[] => {
     return [];
 };
 
-const buildEmbeedingRecipe = (fields: {
+const buildEmbeedingRecipe = async (fields: {
     title: string;
     description: string;
     ingredients: string[];
     cookTime: string;
     difficulty: string;
-}): string =>
-    `${fields.title} ${fields.description} ${fields.ingredients.join(" ")} ${fields.cookTime} ${fields.difficulty}`;
+}): Promise<number[]> => {
+    const text = `${fields.title} ${fields.description} ${fields.ingredients.join(" ")} ${fields.cookTime} ${fields.difficulty}`;
+    return embeddingService.embed(text);
+};
 
 const formatCreatedAt = (value: Date): string => {
     const now = Date.now();
@@ -256,10 +258,9 @@ class RecipeController extends BaseController<IRecipe> {
             return res.status(400).json({ error: "Invalid difficulty" });
         }
 
-        const textToEmbed = buildEmbeedingRecipe({ title, description, ingredients, cookTime, difficulty });
         let embedding: number[];
         try {
-            embedding = await embeddingService.embed(textToEmbed);
+            embedding = await buildEmbeedingRecipe({ title, description, ingredients, cookTime, difficulty });
         } catch (err) {
             console.error("Embedding failed:", err);
             return res.status(503).json({ error: "Service temporarily unavailable. Please try again later." });
@@ -314,10 +315,9 @@ class RecipeController extends BaseController<IRecipe> {
                 ? `/uploads/recipes/${req.file.filename}`
                 : recipe.image;
 
-            const textToEmbed = buildEmbeedingRecipe({ title, description, ingredients, cookTime, difficulty });
             let embedding: number[];
             try {
-                embedding = await embeddingService.embed(textToEmbed);
+                embedding = await buildEmbeedingRecipe({ title, description, ingredients, cookTime, difficulty });
             } catch (err) {
                 console.error("Embedding failed:", err);
                 return res.status(503).json({ error: "Service temporarily unavailable. Please try again later." });
