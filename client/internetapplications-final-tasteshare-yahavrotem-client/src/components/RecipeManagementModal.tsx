@@ -62,14 +62,6 @@ const parseCookDuration = (cookTime?: string): { hours: number; minutes: number 
   };
 };
 
-const fileToDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Failed to read image file."));
-    reader.readAsDataURL(file);
-  });
-
 const toApiAssetUrl = (assetPath?: string): string => {
   if (!assetPath) {
     return "";
@@ -99,7 +91,7 @@ function RecipeManagementModals({
   const [editServings, setEditServings] = useState<string>("");
   const [editDifficulty, setEditDifficulty] = useState<ApiRecipe["difficulty"]>("Easy");
   const [editImagePreview, setEditImagePreview] = useState("");
-  const [editImageValue, setEditImageValue] = useState<string | null>(null);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -121,7 +113,7 @@ function RecipeManagementModals({
       setEditCookMinutes(0);
       setEditServings("");
       setEditDifficulty("Easy");
-      setEditImageValue(null);
+      setEditImageFile(null);
       setEditError(null);
       if (imageInputRef.current) {
         imageInputRef.current.value = "";
@@ -138,7 +130,7 @@ function RecipeManagementModals({
     setEditCookMinutes(cookDuration.minutes);
     setEditServings(String(editingRecipe.servings ?? ""));
     setEditDifficulty(editingRecipe.difficulty);
-    setEditImageValue(null);
+    setEditImageFile(null);
     setEditError(null);
     if (imageInputRef.current) {
       imageInputRef.current.value = "";
@@ -184,7 +176,7 @@ function RecipeManagementModals({
     setEditInstructions((prev) => (prev.length > 1 ? removeListItem(prev, index) : prev));
   };
 
-  const handleEditFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
@@ -212,16 +204,8 @@ function RecipeManagementModals({
       URL.revokeObjectURL(editImagePreview);
     }
 
-    try {
-      const encodedImage = await fileToDataUrl(file);
-      setEditImageValue(encodedImage);
-      setEditImagePreview(URL.createObjectURL(file));
-    } catch (imageError) {
-      setEditError(imageError instanceof Error ? imageError.message : "Failed to read image file.");
-      if (imageInputRef.current) {
-        imageInputRef.current.value = "";
-      }
-    }
+    setEditImageFile(file);
+    setEditImagePreview(URL.createObjectURL(file));
   };
 
   const handleSaveEdit = async () => {
@@ -236,7 +220,7 @@ function RecipeManagementModals({
       const updatedRecipe = await recipeService.updateRecipe(
         editingRecipe._id,
         {
-          image: editImageValue ?? undefined,
+          image: editImageFile ?? undefined,
           title: editTitle.trim(),
           description: editDescription.trim(),
           ingredients: editIngredients.map((item) => item.trim()).filter(Boolean),
@@ -287,7 +271,7 @@ function RecipeManagementModals({
               ref={imageInputRef}
               type="file"
               accept="image/png,image/jpeg,image/gif,image/webp"
-              onChange={(event) => void handleEditFileChange(event)}
+              onChange={handleEditFileChange}
               sx={{ display: "none" }}
             />
 

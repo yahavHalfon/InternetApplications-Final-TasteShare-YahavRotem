@@ -304,7 +304,7 @@ router.post("/", authMiddleware, uploadRecipeImage.single("image"), recipeContro
  *       404:
  *         description: The recipe was not found
  */
-router.put("/:id", authMiddleware, recipeController.put.bind(recipeController));
+router.put("/:id", authMiddleware, uploadRecipeImage.single("image"), recipeController.put.bind(recipeController));
 
 /**
  * @swagger
