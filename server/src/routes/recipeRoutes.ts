@@ -55,6 +55,47 @@ router.get("/me", authMiddleware, recipeController.getMyRecipes.bind(recipeContr
 
 /**
  * @swagger
+ * /recipes/search:
+ *   post:
+ *     summary: Search recipes using natural language via AI
+ *     tags: [Recipes]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - query
+ *             properties:
+ *               query:
+ *                 type: string
+ *                 example: "quick vegetarian pasta with tomatoes"
+ *     responses:
+ *       200:
+ *         description: Semantic search results ranked by relevance
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Recipe'
+ *                 query:
+ *                   type: string
+ *       400:
+ *         description: Query is required or too long
+ *       401:
+ *         description: Unauthorized
+ */
+router.post("/search", authMiddleware, recipeController.searchRecipes.bind(recipeController));
+
+/**
+ * @swagger
  * /recipes/{id}:
  *   get:
  *     summary: Get the recipe by id

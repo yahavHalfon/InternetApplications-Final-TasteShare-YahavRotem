@@ -7,6 +7,8 @@ import CommentModel from "../model/commentModel";
 import User from "../model/userModel";
 import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
+import embeddingService from "../services/embeddingService";
+import recipeService from "../services/recipeService";
 
 const parseStringArray = (value: unknown): string[] => {
     if (Array.isArray(value)) {
@@ -165,6 +167,45 @@ class RecipeController extends BaseController<IRecipe> {
         }
     }
 
+    async searchRecipes(req: AuthRequest, res: Response): Promise<Response | void> {
+        const { query } = req.body;
+
+        if (query === undefined || query === null) {
+            return res.status(400).json({ error: "Query is required" });
+        }
+
+        if (typeof query !== "string") {
+            return res.status(400).json({ error: "Query must be a string" });
+        }
+
+        const trimmedQuery = query.trim();
+        if (trimmedQuery === "") {
+            return res.status(400).json({ error: "Query cannot be empty" });
+        }
+
+        if (trimmedQuery.length > 500) {
+            return res.status(400).json({ error: "Query is too long" });
+        }
+
+        try {
+            let recipes;
+            try {
+                recipes = await recipeService.searchRecipes(trimmedQuery);
+            } catch (searchError) {
+                console.warn("Semantic search failed, falling back to simple search:", searchError);
+                recipes = await recipeService.simpleRecipeSearch(trimmedQuery);
+            }
+
+            return res.status(200).json({
+                data: recipes,
+                query: trimmedQuery,
+            });
+        } catch (error) {
+            console.error("[RecipeController.searchRecipes] Error:", error);
+            return res.status(500).json({ error: "Internal server error" });
+        }
+    }
+
     async create(req: AuthRequest, res: Response) {
         const userId = req.user?._id;
         if (!userId) {
@@ -205,6 +246,15 @@ class RecipeController extends BaseController<IRecipe> {
             return res.status(400).json({ error: "Invalid difficulty" });
         }
 
+        const textToEmbed = `${title} ${description} ${ingredients.join(" ")} ${cookTime} ${difficulty}`;
+        let embedding: number[];
+        try {
+            embedding = await embeddingService.embed(textToEmbed);
+        } catch (err) {
+            console.error("Embedding failed:", err);
+            return res.status(503).json({ error: "Service temporarily unavailable. Please try again later." });
+        }
+
         req.body = {
             userId,
             image: `/uploads/recipes/${req.file.filename}`,
@@ -216,6 +266,7 @@ class RecipeController extends BaseController<IRecipe> {
             servings,
             difficulty,
             likedBy: [],
+            embedding,
         };
 
         return super.create(req, res);
@@ -235,6 +286,23 @@ class RecipeController extends BaseController<IRecipe> {
                 res.status(403).json({ error: "Unauthorized: You can only update your own recipes" });
                 return;
             }
+
+            const title = req.body.title ?? recipe.title;
+            const description = req.body.description ?? recipe.description;
+            const ingredients = req.body.ingredients ?? recipe.ingredients;
+            const cookTime = req.body.cookTime ?? recipe.cookTime;
+            const difficulty = req.body.difficulty ?? recipe.difficulty;
+
+            const textToEmbed = `${title} ${description} ${ingredients.join(" ")} ${cookTime} ${difficulty}`;
+            let embedding: number[];
+            try {
+                embedding = await embeddingService.embed(textToEmbed);
+            } catch (err) {
+                console.error("Embedding failed:", err);
+                return res.status(503).json({ error: "Service temporarily unavailable. Please try again later." });
+            }
+
+            req.body.embedding = embedding;
             return super.put(req, res);
         } catch (error) {
             return this.handleError(res, error);
