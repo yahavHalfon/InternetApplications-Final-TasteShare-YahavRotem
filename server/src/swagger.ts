@@ -5,9 +5,9 @@ const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'Assignment 2 API',
-            version: '1.0.0',
-            description: 'API for managing Users, Recipes, and Comments',
+            title: 'TasteShare API',
+            version: '2.0.0',
+            description: 'REST API for TasteShare - a recipe sharing social platform with AI-powered semantic search',
             contact: {
                 name: 'Yahav & Rotem',
             },
@@ -159,7 +159,6 @@ const options: swaggerJsdoc.Options = {
                         userId: { type: 'string', example: '60d0fe4f5311236168a109ca' },
                         text: { type: 'string', example: 'Looks delicious!' },
                         createdAt: { type: 'string', format: 'date-time' },
-                        updatedAt: { type: 'string', format: 'date-time' },
                     },
                 },
                 RecipeCommentResponse: {
