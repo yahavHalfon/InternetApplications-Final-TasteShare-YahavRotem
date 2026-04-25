@@ -5,7 +5,6 @@ export interface IComment {
   userId: Types.ObjectId;
   text: string;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 const commentSchema = new Schema<IComment>(
@@ -27,7 +26,7 @@ const commentSchema = new Schema<IComment>(
     },
   },
   {
-    timestamps: true,
+    timestamps: { createdAt: true, updatedAt: false },
   }
 );
 
