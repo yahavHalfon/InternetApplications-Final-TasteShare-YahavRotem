@@ -119,6 +119,65 @@ describe("Comment Tests", () => {
 
         expect(response.statusCode).toBe(404);
     });
+
+    test("Get Recipe Comments - Empty list for new recipe", async () => {
+        // Create a fresh recipe with no comments
+        const createResponse = await request(app)
+            .post("/recipes")
+            .set("Authorization", "Bearer " + accessToken)
+            .field("title", "Empty Comments Recipe")
+            .field("description", "No comments here yet")
+            .field("ingredients", JSON.stringify(["item"]))
+            .field("instructions", JSON.stringify(["step"]))
+            .field("cookTime", "5 min")
+            .field("servings", "1")
+            .field("difficulty", "Easy")
+            .attach("image", Buffer.from("fake-image-data"), "recipe.jpg");
+        const emptyRecipeId = createResponse.body._id;
+
+        const response = await request(app).get(`/recipes/${emptyRecipeId}/comments`);
+        expect(response.statusCode).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body.length).toBe(0);
+    });
+
+    test("Get Recipe Comments - Fail (Invalid Recipe ID Format)", async () => {
+        const response = await request(app).get("/recipes/invalid-id-format/comments");
+        expect(response.statusCode).toBe(400);
+    });
+
+    test("Multiple Comments on Same Recipe", async () => {
+        await request(app)
+            .post(`/recipes/${recipeId}/comments`)
+            .set("Authorization", "Bearer " + accessToken)
+            .send({ text: "Second comment" });
+        await request(app)
+            .post(`/recipes/${recipeId}/comments`)
+            .set("Authorization", "Bearer " + accessToken)
+            .send({ text: "Third comment" });
+
+        const response = await request(app).get(`/recipes/${recipeId}/comments`);
+        expect(response.statusCode).toBe(200);
+        expect(response.body.length).toBeGreaterThanOrEqual(3);
+    });
+
+    test("Comment Author Info Is Populated", async () => {
+        const response = await request(app).get(`/recipes/${recipeId}/comments`);
+        expect(response.statusCode).toBe(200);
+        expect(response.body[0].author).toBeDefined();
+        expect(typeof response.body[0].author.name).toBe("string");
+        expect(response.body[0].author).toHaveProperty("avatarUrl");
+    });
+
+    test("Create Comment With Long Text - Success", async () => {
+        const longText = "A".repeat(500);
+        const response = await request(app)
+            .post(`/recipes/${recipeId}/comments`)
+            .set("Authorization", "Bearer " + accessToken)
+            .send({ text: longText });
+        expect(response.statusCode).toBe(201);
+        expect(response.body.text).toBe(longText);
+    });
 });
 
 
