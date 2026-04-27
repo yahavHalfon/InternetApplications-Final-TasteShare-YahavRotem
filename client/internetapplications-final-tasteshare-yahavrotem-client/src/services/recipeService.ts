@@ -52,9 +52,20 @@ export type UserRecipesResponse = {
   data: ApiRecipe[];
 };
 
+export type AiGeneratedRecipe = {
+  title: string;
+  description: string;
+  ingredients: string[];
+  instructions: string[];
+  cookTime: string;
+  servings: number;
+  difficulty: "Easy" | "Medium" | "Advanced";
+};
+
 export type SearchRecipesResponse = {
   data: (ApiRecipe & { commentsCount?: number })[];
   query: string;
+  aiSuggestions?: AiGeneratedRecipe[];
 };
 
 export type CreateRecipePayload = {

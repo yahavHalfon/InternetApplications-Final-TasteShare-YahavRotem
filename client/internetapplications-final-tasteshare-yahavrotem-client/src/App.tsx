@@ -174,7 +174,12 @@ const AppContent = () => {
       notify("success", "Your account has been created successfully.");
       navigate("/recipes", { replace: true });
     } catch (error) {
-      notify("error", error instanceof Error ? error.message : "Registration failed.");
+      const message = error instanceof Error ? error.message : "Registration failed.";
+      if (/username.*(already exists|already taken|is already taken)/i.test(message)) {
+        notify("error", "Username is already taken.");
+      } else {
+        notify("error", message);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -229,6 +234,18 @@ const AppContent = () => {
         console.error("Logout error", error);
       }
     }
+
+    // Ensure the auth flow always returns to the initial sign-in screen after explicit logout.
+    setAuthMode("login");
+    setRegisterStep(1);
+    setRegisterCredentials(null);
+    setAvatarFile(null);
+    if (avatarPreviewUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreviewUrl);
+    }
+    setAvatarPreviewUrl("");
+    setShowPassword(false);
+
     logout();
     localStorage.removeItem(USER_STORAGE_KEY);
     setUserSession(null);

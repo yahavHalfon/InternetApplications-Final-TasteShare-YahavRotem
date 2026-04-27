@@ -8,6 +8,7 @@ import User from "../model/userModel";
 import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 import embeddingService from "../services/embeddingService";
+import type { AiGeneratedRecipe } from "../services/embeddingService";
 import recipeService from "../services/recipeService";
 
 const parseStringArray = (value: unknown): string[] => {
@@ -208,9 +209,19 @@ class RecipeController extends BaseController<IRecipe> {
                 recipes = await recipeService.simpleRecipeSearch(trimmedQuery);
             }
 
+            let aiSuggestions: AiGeneratedRecipe[] = [];
+            try {
+                if (recipes.length > 0) {
+                    aiSuggestions = await embeddingService.generateRecipes(trimmedQuery, recipes);
+                }
+            } catch (ragError) {
+                console.warn("[RecipeController.searchRecipes] RAG generation failed:", ragError);
+            }
+
             return res.status(200).json({
                 data: recipes,
                 query: trimmedQuery,
+                aiSuggestions,
             });
         } catch (error) {
             console.error("[RecipeController.searchRecipes] Error:", error);

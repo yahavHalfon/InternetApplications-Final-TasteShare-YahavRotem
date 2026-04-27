@@ -147,7 +147,7 @@ export const register = async (req: Request, res: Response) => {
         }
 
         if (requestedUsername && await User.findOne({ username: requestedUsername }).select("_id").lean()) {
-            return sendError(409, "Username already exists", res);
+            return sendError(409, "Username is already taken", res);
         }
 
         const username = requestedUsername || await resolveAvailableUsername(baseUsername);
@@ -170,13 +170,18 @@ export const register = async (req: Request, res: Response) => {
         await savedUser.save();
         res.status(201).json(createAuthResponse(savedUser, tokens));
     } catch (err) {
-        const mongoError = err as { code?: number; keyPattern?: Record<string, number> };
+        const mongoError = err as {
+            code?: number;
+            keyPattern?: Record<string, number>;
+            keyValue?: Record<string, unknown>;
+            message?: string;
+        };
         if (mongoError.code === 11000) {
             if (mongoError.keyPattern?.email) {
                 return sendError(409, "User already exists", res);
             }
-            if (mongoError.keyPattern?.username) {
-                return sendError(409, "Username already exists", res);
+            if (mongoError.keyPattern?.username || Object.prototype.hasOwnProperty.call(mongoError.keyValue ?? {}, "username") || /username/i.test(mongoError.message ?? "")) {
+                return sendError(409, "Username is already taken", res);
             }
             return sendError(409, "User already exists", res);
         }
