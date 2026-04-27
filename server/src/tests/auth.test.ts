@@ -64,13 +64,32 @@ describe("Auth Routes Tests", () => {
         expect(response.statusCode).toBe(400);
     });
 
-    test("Register User - Fail (Missing username)", async () => {
+    test("Register User - Success (Missing username)", async () => {
         const response = await request(app).post("/auth/register").send({
             email: "nousername@auth.com",
             password: "password123"
         });
-        expect(response.statusCode).toBe(400);
-        expect(response.body.error).toBe("Username is required");
+        expect(response.statusCode).toBe(201);
+        expect(response.body.user.username).toBe("nousername");
+    });
+
+    test("Register User - Success (Auto-generated unique username)", async () => {
+        const firstResponse = await request(app).post("/auth/register").send({
+            email: "autouser1@auth.com",
+            password: "password123",
+            name: "Auto User"
+        });
+
+        const secondResponse = await request(app).post("/auth/register").send({
+            email: "autouser2@auth.com",
+            password: "password123",
+            name: "Auto User"
+        });
+
+        expect(firstResponse.statusCode).toBe(201);
+        expect(secondResponse.statusCode).toBe(201);
+        expect(firstResponse.body.user.username).toBe("autouser");
+        expect(secondResponse.body.user.username).not.toBe(firstResponse.body.user.username);
     });
 
     test("Login User - Success", async () => {

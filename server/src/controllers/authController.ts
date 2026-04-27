@@ -28,6 +28,7 @@ type PublicUser = {
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const oauthClient = new OAuth2Client();
+const MAX_USERNAME_LENGTH = 30;
 
 export const getJWTSecret = (): string => {
     const secret = process.env.JWT_SECRET;
@@ -62,7 +63,33 @@ const generateToken = (userId: string): GeneratedTokens => {
 }
 
 const normalizeUsername = (name: string): string =>
-    slugify(name, { lower: true, strict: true, trim: true, replacement: "" }).slice(0, 30);
+    slugify(name, { lower: true, strict: true, trim: true, replacement: "" }).slice(0, MAX_USERNAME_LENGTH);
+
+const buildUsernameWithSuffix = (baseUsername: string, suffix: number): string => {
+    const suffixString = `${suffix}`;
+    const maxBaseLength = MAX_USERNAME_LENGTH - suffixString.length;
+    return `${baseUsername.slice(0, maxBaseLength)}${suffixString}`;
+};
+
+const resolveAvailableUsername = async (preferredUsername: string): Promise<string> => {
+    let candidate = preferredUsername;
+    let suffix = 1;
+
+    while (await User.exists({ username: candidate })) {
+        candidate = buildUsernameWithSuffix(preferredUsername, suffix);
+        suffix += 1;
+
+        if (suffix > 9999) {
+            candidate = `${preferredUsername.slice(0, 24)}${randomUUID().replace(/-/g, "").slice(0, 6)}`;
+            if (!(await User.exists({ username: candidate }))) {
+                break;
+            }
+            suffix = 1;
+        }
+    }
+
+    return candidate;
+};
 
 const buildPublicUser = (user: InstanceType<typeof User>): PublicUser => {
     return {
@@ -87,7 +114,7 @@ export const register = async (req: Request, res: Response) => {
     const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
     const password = typeof req.body.password === "string" ? req.body.password : "";
     const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
-    const username = typeof req.body.username === "string" ? normalizeUsername(req.body.username) : "";
+    const requestedUsername = typeof req.body.username === "string" ? normalizeUsername(req.body.username) : "";
     const bio = typeof req.body.bio === "string" ? req.body.bio.trim() : "";
     const location = typeof req.body.location === "string" ? req.body.location.trim() : "";
     const website = typeof req.body.website === "string" ? req.body.website.trim() : "";
@@ -106,22 +133,24 @@ export const register = async (req: Request, res: Response) => {
     if (password.length < 8) {
         return sendError(400, "Password must be at least 8 characters", res);
     }
-    if (!username) {
+    const emailPrefix = email.split("@")[0] ?? "";
+    const baseUsername = requestedUsername || normalizeUsername(name) || normalizeUsername(emailPrefix);
+    if (!baseUsername) {
         return sendError(400, "Username is required", res);
     }
 
     try {
-        const [existingByEmail, existingByUsername] = await Promise.all([
-            User.findOne({ email }).select("_id").lean(),
-            User.findOne({ username }).select("_id").lean(),
-        ]);
+        const existingByEmail = await User.findOne({ email }).select("_id").lean();
 
         if (existingByEmail) {
             return sendError(409, "User already exists", res);
         }
-        if (existingByUsername) {
+
+        if (requestedUsername && await User.findOne({ username: requestedUsername }).select("_id").lean()) {
             return sendError(409, "Username already exists", res);
         }
+
+        const username = requestedUsername || await resolveAvailableUsername(baseUsername);
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
