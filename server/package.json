@@ -18,7 +18,7 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "start": "tsc && ENV_FILE=.env.dev node ./dist/src/server.js",
+    "start": "tsc && ENV_FILE=.env.dev node ./dist/server.js",
     "dev": "nodemon  ./src/server.ts",
     "build": "tsc -p tsconfig.json",
     "build:prod": "NODE_ENV=production ENV_FILE=.env.prod tsc -p tsconfig_prod.json",

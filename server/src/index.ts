@@ -33,7 +33,7 @@ const corsOptions: cors.CorsOptions = {
       return;
     }
 
-    callback(new Error("Origin is not allowed by CORS"));
+    callback(null, false);
   },
   credentials: true,
   maxAge: 86400,
