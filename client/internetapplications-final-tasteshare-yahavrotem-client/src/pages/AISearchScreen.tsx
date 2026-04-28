@@ -241,7 +241,7 @@ function AISearchScreen({ token }: AISearchScreenProps) {
     setError(null);
 
     try {
-      const response = await recipeService.searchRecipes(searchQuery, token);
+      const response = await recipeService.searchRecipes(searchQuery, token, true);
       setResults(response.data);
       setAiSuggestions(response.aiSuggestions ?? []);
       setSearched(true);

@@ -134,14 +134,14 @@ const createRecipe = async (payload: CreateRecipePayload, token: string): Promis
   return (await response.json()) as ApiRecipe;
 };
 
-const searchRecipes = async (query: string, token: string): Promise<SearchRecipesResponse> => {
+const searchRecipes = async (query: string, token: string, generateAi: boolean = true): Promise<SearchRecipesResponse> => {
   const response = await fetch(`${API_BASE_URL}/recipes/search`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, generateAi }),
   });
 
   if (!response.ok) {

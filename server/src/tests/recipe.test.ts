@@ -22,6 +22,9 @@ jest.spyOn(embeddingService, "embed").mockImplementation(async (text: string) =>
     return vec;
 });
 
+// Prevent real Gemini RAG calls in all tests by default; individual unit tests override this.
+jest.spyOn(embeddingService, "generateRecipes").mockResolvedValue([]);
+
 let app: Express;
 const testUser = {
     email: "test@user.com",
@@ -385,6 +388,7 @@ describe("Recipe Search Controller Unit Tests", () => {
     test("Search - Success", async () => {
         const searchRecipesSpy = jest.spyOn(recipeService, "searchRecipes").mockResolvedValue(mockRecipes as any);
         jest.spyOn(recipeService, "simpleRecipeSearch").mockResolvedValue(mockRecipes as any);
+        jest.spyOn(embeddingService, "generateRecipes").mockResolvedValue([]);
 
         const { req, res, status, json } = makeReqRes({ query: "vegetarian pasta with tomatoes" });
         await recipeController.searchRecipes(req, res);
@@ -394,12 +398,71 @@ describe("Recipe Search Controller Unit Tests", () => {
         expect(json).toHaveBeenCalledWith({
             data: mockRecipes,
             query: "vegetarian pasta with tomatoes",
+            aiSuggestions: [],
         });
+    });
+
+    test("Search - generateAi: false skips RAG", async () => {
+        jest.spyOn(recipeService, "searchRecipes").mockResolvedValue(mockRecipes as any);
+        const generateRecipesSpy = jest.spyOn(embeddingService, "generateRecipes").mockResolvedValue([]);
+
+        const { req, res, status, json } = makeReqRes({ query: "pasta", generateAi: false });
+        await recipeController.searchRecipes(req, res);
+
+        expect(generateRecipesSpy).not.toHaveBeenCalled();
+        expect(status).toHaveBeenCalledWith(200);
+        expect(json).toHaveBeenCalledWith(
+            expect.objectContaining({ aiSuggestions: [] })
+        );
+    });
+
+    test("Search - generateAi: true calls RAG with recipes", async () => {
+        const fakeAi = [{ title: "AI Recipe", description: "d", ingredients: [], instructions: [], cookTime: "10m", servings: 2, difficulty: "Easy" as const }];
+        jest.spyOn(recipeService, "searchRecipes").mockResolvedValue(mockRecipes as any);
+        const generateRecipesSpy = jest.spyOn(embeddingService, "generateRecipes").mockResolvedValue(fakeAi);
+
+        const { req, res, status, json } = makeReqRes({ query: "pasta", generateAi: true });
+        await recipeController.searchRecipes(req, res);
+
+        expect(generateRecipesSpy).toHaveBeenCalledWith("pasta", mockRecipes);
+        expect(json).toHaveBeenCalledWith(
+            expect.objectContaining({ aiSuggestions: fakeAi })
+        );
+    });
+
+    test("Search - omitted generateAi defaults to AI enabled", async () => {
+        jest.spyOn(recipeService, "searchRecipes").mockResolvedValue(mockRecipes as any);
+        const generateRecipesSpy = jest.spyOn(embeddingService, "generateRecipes").mockResolvedValue([]);
+
+        const { req, res } = makeReqRes({ query: "pasta" });
+        await recipeController.searchRecipes(req, res);
+
+        expect(generateRecipesSpy).toHaveBeenCalled();
+    });
+
+    test("Search - generateAi: true with empty recipes still calls RAG", async () => {
+        jest.spyOn(recipeService, "searchRecipes").mockResolvedValue([]);
+        jest.spyOn(recipeService, "simpleRecipeSearch").mockResolvedValue([]);
+        const generateRecipesSpy = jest.spyOn(embeddingService, "generateRecipes").mockResolvedValue([]);
+
+        const { req, res, status } = makeReqRes({ query: "xkcd12345gibberish", generateAi: true });
+        await recipeController.searchRecipes(req, res);
+
+        expect(generateRecipesSpy).toHaveBeenCalledWith("xkcd12345gibberish", []);
+        expect(status).toHaveBeenCalledWith(200);
+    });
+
+    test("Search - Fail (generateAi non-boolean)", async () => {
+        const { req, res, status, json } = makeReqRes({ query: "pasta", generateAi: "yes" });
+        await recipeController.searchRecipes(req, res);
+        expect(status).toHaveBeenCalledWith(400);
+        expect(json).toHaveBeenCalledWith({ error: "generateAi must be a boolean" });
     });
 
     test("Search - Fallback to simpleRecipeSearch when searchRecipes throws", async () => {
         jest.spyOn(recipeService, "searchRecipes").mockRejectedValue(new Error("Embedding error"));
         const simpleRecipeSearchSpy = jest.spyOn(recipeService, "simpleRecipeSearch").mockResolvedValue(mockRecipes as any);
+        jest.spyOn(embeddingService, "generateRecipes").mockResolvedValue([]);
 
         const { req, res, status, json } = makeReqRes({ query: "pasta" });
         await recipeController.searchRecipes(req, res);

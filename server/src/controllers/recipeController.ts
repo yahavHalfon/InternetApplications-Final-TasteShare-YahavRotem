@@ -181,7 +181,7 @@ class RecipeController extends BaseController<IRecipe> {
     }
 
     async searchRecipes(req: AuthRequest, res: Response): Promise<Response | void> {
-        const { query } = req.body;
+        const { query, generateAi } = req.body;
 
         if (query === undefined || query === null) {
             return res.status(400).json({ error: "Query is required" });
@@ -200,6 +200,12 @@ class RecipeController extends BaseController<IRecipe> {
             return res.status(400).json({ error: "Query is too long" });
         }
 
+        if (generateAi !== undefined && typeof generateAi !== "boolean") {
+            return res.status(400).json({ error: "generateAi must be a boolean" });
+        }
+
+        const shouldGenerateAi = generateAi !== false;
+
         try {
             let recipes;
             try {
@@ -211,7 +217,7 @@ class RecipeController extends BaseController<IRecipe> {
 
             let aiSuggestions: AiGeneratedRecipe[] = [];
             try {
-                if (recipes.length > 0) {
+                if (shouldGenerateAi) {
                     aiSuggestions = await embeddingService.generateRecipes(trimmedQuery, recipes);
                 }
             } catch (ragError) {

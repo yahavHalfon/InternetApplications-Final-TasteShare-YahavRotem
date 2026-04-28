@@ -54,7 +54,7 @@ describe("Auth Routes Tests", () => {
 
         const secondResponse = await request(app).post("/auth/register").send(secondUser);
         expect(secondResponse.statusCode).toBe(409);
-        expect(secondResponse.body.error).toBe("Username already exists");
+        expect(secondResponse.body.error).toBe("Username is already taken");
     });
 
     test("Register User - Fail (Missing fields)", async () => {

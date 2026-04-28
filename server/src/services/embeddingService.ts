@@ -58,10 +58,13 @@ class EmbeddingService {
             2
         );
 
+        const contextSection =
+            contextRecipes.length > 0
+                ? `Here are some existing recipes from our database related to that search:\n${formattedRecipes}\nBased on the user's search and taking inspiration from the provided recipes, generate exactly 2 brand new, unique recipes.`
+                : `No existing recipes are available for inspiration — generate exactly 2 brand new, unique recipes based on the user query alone.`;
+
         const prompt = `You are a world-class chef. The user searched for "${query}".
-Here are some existing recipes from our database related to that search:
-${formattedRecipes}
-Based on the user's search and taking inspiration from the provided recipes, generate exactly 2 brand new, unique recipes.
+${contextSection}
 You must respond ONLY in valid JSON using the following structure:
 ${recipeStructure}`;
 
