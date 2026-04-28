@@ -11,7 +11,6 @@ import recipeService from "../services/recipeService";
 import recipeController from "../controllers/recipeController";
 import { AuthRequest } from "../middleware/authMiddleware";
 
-// Mock embedding calls so tests are deterministic and do not call external APIs.
 let embedCallCount = 0;
 jest.spyOn(embeddingService, "embed").mockImplementation(async (text: string) => {
     embedCallCount++;
@@ -22,7 +21,6 @@ jest.spyOn(embeddingService, "embed").mockImplementation(async (text: string) =>
     return vec;
 });
 
-// Prevent real Gemini RAG calls in all tests by default; individual unit tests override this.
 jest.spyOn(embeddingService, "generateRecipes").mockResolvedValue([]);
 
 let app: Express;
@@ -638,10 +636,6 @@ describe("Get My Recipes Tests", () => {
 });
 
 describe("Recipe Service Tests", () => {
-    // vecA = [1, 0, 0, ...] and vecB = [0, 1, 0, ...]
-    // cosineSimilarity(vecA, vecA) = 1.0  → above 0.55 threshold → returned
-    // cosineSimilarity(vecA, vecB) = 0    → below 0.55 threshold → filtered
-    // vecC = [0.6, 0.8, 0, ...] → cosineSimilarity(vecA, vecC) = 0.6 → above threshold but < 1.0
     const DIMS = 768;
     const vecA: number[] = new Array(DIMS).fill(0);
     vecA[0] = 1;
@@ -686,8 +680,8 @@ describe("Recipe Service Tests", () => {
         });
 
         test("filters out recipe below similarity threshold (score 0)", async () => {
-            await recipeModel.create(baseRecipe()); // embedding = vecA
-            jest.spyOn(embeddingService, "embed").mockResolvedValueOnce([...vecB]); // orthogonal → similarity 0
+            await recipeModel.create(baseRecipe());
+            jest.spyOn(embeddingService, "embed").mockResolvedValueOnce([...vecB]);
 
             const results = await recipeService.searchRecipes("query");
 
@@ -695,7 +689,6 @@ describe("Recipe Service Tests", () => {
         });
 
         test("zero-vector embedding produces similarity 0 (filtered out)", async () => {
-            // All-zeros embedding → denominator = 0 → cosineSimilarity returns 0 → below threshold
             const zeroVec = new Array(DIMS).fill(0);
             await recipeModel.create({ ...baseRecipe(), embedding: zeroVec });
             jest.spyOn(embeddingService, "embed").mockResolvedValueOnce([...vecA]);
@@ -706,17 +699,15 @@ describe("Recipe Service Tests", () => {
         });
 
         test("results sorted by score descending", async () => {
-            // Recipe A: embedding vecA → similarity 1.0 against vecA query
             await recipeModel.create({ ...baseRecipe(), title: "Recipe A", embedding: [...vecA] });
-            // Recipe B: embedding vecC → similarity 0.6 against vecA query (still above 0.55)
             await recipeModel.create({ ...baseRecipe(), title: "Recipe B", embedding: [...vecC] });
             jest.spyOn(embeddingService, "embed").mockResolvedValueOnce([...vecA]);
 
             const results = await recipeService.searchRecipes("query");
 
             expect(results.length).toBe(2);
-            expect(results[0].title).toBe("Recipe A"); // score 1.0 first
-            expect(results[1].title).toBe("Recipe B"); // score 0.6 second
+            expect(results[0].title).toBe("Recipe A");
+            expect(results[1].title).toBe("Recipe B");
         });
 
         test("strips embedding field from results", async () => {

@@ -85,7 +85,6 @@ ${recipeStructure}`;
         const data = (await response.json()) as GeminiGenerateResponse;
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-        // Strip markdown code fences if Gemini wraps the JSON
         const jsonText = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
         return JSON.parse(jsonText) as AiGeneratedRecipe[];

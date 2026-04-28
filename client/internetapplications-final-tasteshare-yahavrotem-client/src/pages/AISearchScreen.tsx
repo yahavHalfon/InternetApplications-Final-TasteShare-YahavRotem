@@ -154,7 +154,6 @@ function AiRecipeCard({ recipe, onOpen }: { recipe: AiGeneratedRecipe; onOpen: (
         "&:hover": { boxShadow: "0 6px 16px rgba(0,0,0,0.08)" },
       }}
     >
-      {/* Placeholder gradient instead of image */}
       <Box
         sx={{
           width: 180,
@@ -231,6 +230,7 @@ function AISearchScreen({ token }: AISearchScreenProps) {
   const [aiSuggestions, setAiSuggestions] = useState<AiGeneratedRecipe[]>([]);
   const [selectedAiRecipe, setSelectedAiRecipe] = useState<AiGeneratedRecipe | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async (q?: string) => {
@@ -239,16 +239,22 @@ function AISearchScreen({ token }: AISearchScreenProps) {
     setQuery(searchQuery);
     setIsLoading(true);
     setError(null);
+    setAiSuggestions([]);
 
     try {
-      const response = await recipeService.searchRecipes(searchQuery, token, true);
+      const response = await recipeService.searchRecipes(searchQuery, token, false);
       setResults(response.data);
-      setAiSuggestions(response.aiSuggestions ?? []);
       setSearched(true);
+      setIsLoading(false);
+
+      setIsAiLoading(true);
+      const aiResponse = await recipeService.searchRecipes(searchQuery, token, true);
+      setAiSuggestions(aiResponse.aiSuggestions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed.");
     } finally {
       setIsLoading(false);
+      setIsAiLoading(false);
     }
   };
 
@@ -270,7 +276,6 @@ function AISearchScreen({ token }: AISearchScreenProps) {
 
   return (
     <Box sx={{ minHeight: "100vh", p: 4 }}>
-      {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
           <AutoAwesome sx={{ fontSize: 20, color: "primary.main" }} />
@@ -283,7 +288,6 @@ function AISearchScreen({ token }: AISearchScreenProps) {
         </Typography>
       </Box>
 
-      {/* Search bar */}
       <Box sx={{ maxWidth: 640, mb: 4 }}>
         <TextField
           fullWidth
@@ -394,7 +398,18 @@ function AISearchScreen({ token }: AISearchScreenProps) {
               </Grid>
             )}
 
-            {aiSuggestions.length > 0 && (
+            {isAiLoading && (
+              <Box sx={{ mt: 5, p: 3, bgcolor: "rgba(255,107,53,0.02)", borderRadius: 2, border: "1px dashed", borderColor: "primary.light" }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" color="text.secondary">
+                    Generating unique AI recipes based on these results...
+                  </Typography>
+                </Stack>
+              </Box>
+            )}
+
+            {!isAiLoading && aiSuggestions.length > 0 && (
               <Box sx={{ mt: 5 }}>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                   <AutoAwesome sx={{ fontSize: 16, color: "primary.main" }} />
