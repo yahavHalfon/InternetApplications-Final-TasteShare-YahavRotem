@@ -1,21 +1,23 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
+const swaggerServerUrl = process.env.PUBLIC_SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
+
 const options: swaggerJsdoc.Options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'Assignment 2 API',
-            version: '1.0.0',
-            description: 'API for managing Users, Recipes, and Comments',
+            title: 'TasteShare API',
+            version: '2.0.0',
+            description: 'REST API for TasteShare - a recipe sharing social platform with AI-powered semantic search',
             contact: {
                 name: 'Yahav & Rotem',
             },
         },
         servers: [
             {
-                url: `http://localhost:${process.env.PORT || 3000}`,
-                description: 'Development server',
+                url: swaggerServerUrl,
+                description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server',
             },
         ],
         components: {
@@ -48,23 +50,6 @@ const options: swaggerJsdoc.Options = {
                         token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
                         refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
                         user: { $ref: '#/components/schemas/PublicUser' },
-                    },
-                },
-                User: {
-                    type: 'object',
-                    required: ['email', 'password'],
-                    properties: {
-                        _id: { type: 'string', example: '60d0fe4f5311236168a109ca' },
-                        email: { type: 'string', example: 'test@test.com' },
-                        password: { type: 'string', example: 'password123' },
-                        refreshTokens: { type: 'array', items: { type: 'string' } },
-                        name: { type: 'string', example: 'Maria Chen' },
-                        username: { type: 'string', example: 'mariachen' },
-                        avatarUrl: { type: 'string', example: 'https://example.com/avatar.png' },
-                        bio: { type: 'string', example: 'Home cook and food photographer.' },
-                        website: { type: 'string', example: 'tasteshare.co/maria' },
-                        location: { type: 'string', example: 'San Francisco, CA' },
-                        savedRecipes: { type: 'array', items: { type: 'string' } },
                     },
                 },
                 Recipe: {
@@ -159,7 +144,6 @@ const options: swaggerJsdoc.Options = {
                         userId: { type: 'string', example: '60d0fe4f5311236168a109ca' },
                         text: { type: 'string', example: 'Looks delicious!' },
                         createdAt: { type: 'string', format: 'date-time' },
-                        updatedAt: { type: 'string', format: 'date-time' },
                     },
                 },
                 RecipeCommentResponse: {

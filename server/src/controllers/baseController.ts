@@ -8,27 +8,6 @@ class BaseController<T> {
         this.model = model;
     }
 
-    async get(_req: Request, res: Response): Promise<Response | void> {
-        try {
-            const items = await this.model.find();
-            return res.status(200).json(items);
-        } catch (error) {
-            return this.handleError(res, error);
-        }
-    }
-
-    async getById(req: Request, res: Response): Promise<Response | void> {
-        try {
-            const item = await this.model.findById(req.params.id);
-            if (!item) {
-                return res.status(404).json({ error: "Item not found" });
-            }
-            return res.status(200).json(item);
-        } catch (error) {
-            return this.handleError(res, error);
-        }
-    }
-
     async create(req: Request, res: Response): Promise<Response | void> {
         try {
             const item = await this.model.create(req.body);

@@ -1,7 +1,7 @@
 import User from "../model/userModel";
 import type { IUser } from "../model/userModel";
 import BaseController from "./baseController";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import type { AuthRequest } from "../middleware/authMiddleware";
 import slugify from "slugify";
 
@@ -26,6 +26,22 @@ class UserController extends BaseController<IUser> {
             website: user.website,
             location: user.location,
         };
+    }
+
+    /**
+     * Override base getById to return only public user data.
+     * The base version would leak password and refreshTokens.
+     */
+    async getById(req: Request, res: Response): Promise<Response | void> {
+        try {
+            const user = await User.findById(req.params.id);
+            if (!user) {
+                return res.status(404).json({ error: "User not found" });
+            }
+            return res.status(200).json(this.toPublicUser(user));
+        } catch (error) {
+            return this.handleError(res, error);
+        }
     }
 
     async getProfile(req: AuthRequest, res: Response): Promise<Response | void> {

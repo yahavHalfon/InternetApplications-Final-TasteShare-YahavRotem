@@ -13,6 +13,9 @@ import {
   Grid,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from "@mui/material";
 import {
   Search,
@@ -23,7 +26,7 @@ import {
   ArrowForward,
 } from "@mui/icons-material";
 import { recipeService } from "../services/recipeService";
-import type { ApiRecipe } from "../services/recipeService";
+import type { ApiRecipe, AiGeneratedRecipe } from "../services/recipeService";
 import { API_BASE_URL } from "../config/env";
 
 const SUGGESTIONS = [
@@ -129,6 +132,92 @@ function MiniRecipeCard({
   );
 }
 
+function AiRecipeCard({ recipe, onOpen }: { recipe: AiGeneratedRecipe; onOpen: (recipe: AiGeneratedRecipe) => void }) {
+  const difficultyColor =
+    recipe.difficulty === "Easy"
+      ? { bg: "#f0fdf4", color: "#16a34a" }
+      : recipe.difficulty === "Medium"
+      ? { bg: "#fffbeb", color: "#d97706" }
+      : { bg: "#fef2f2", color: "#dc2626" };
+
+  return (
+    <Card
+      onClick={() => onOpen(recipe)}
+      sx={{
+        display: "flex",
+        height: 180,
+        border: "1.5px solid",
+        borderColor: "primary.light",
+        bgcolor: "rgba(255,107,53,0.03)",
+        cursor: "pointer",
+        transition: "box-shadow 0.2s",
+        "&:hover": { boxShadow: "0 6px 16px rgba(0,0,0,0.08)" },
+      }}
+    >
+      <Box
+        sx={{
+          width: 180,
+          height: 180,
+          flexShrink: 0,
+          background: "linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <AutoAwesome sx={{ fontSize: 40, color: "white", opacity: 0.9 }} />
+      </Box>
+      <Box sx={{ flex: 1, p: 2, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <Box>
+          <Typography variant="caption" color="grey.400" sx={{ mb: 0.75, display: "block" }}>
+            {recipe.cookTime}
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 500,
+              mb: 0.5,
+              display: "-webkit-box",
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {recipe.title}
+          </Typography>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              lineHeight: 1.6,
+            }}
+          >
+            {recipe.description}
+          </Typography>
+        </Box>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1.5 }}>
+          <Chip
+            label="AI Generated"
+            size="small"
+            icon={<AutoAwesome sx={{ fontSize: 10, color: "primary.main" }} />}
+            sx={{ bgcolor: "rgba(255,107,53,0.1)", color: "primary.main", fontSize: 10, height: 22 }}
+          />
+          <Box sx={{ flex: 1 }} />
+          <Chip
+            label={recipe.difficulty}
+            size="small"
+            sx={{ bgcolor: difficultyColor.bg, color: difficultyColor.color, fontSize: 10, height: 22 }}
+          />
+        </Stack>
+      </Box>
+    </Card>
+  );
+}
+
 type AISearchScreenProps = {
   token: string;
 };
@@ -138,7 +227,10 @@ function AISearchScreen({ token }: AISearchScreenProps) {
   const [query, setQuery] = useState("");
   const [searched, setSearched] = useState(false);
   const [results, setResults] = useState<(ApiRecipe & { commentsCount?: number })[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<AiGeneratedRecipe[]>([]);
+  const [selectedAiRecipe, setSelectedAiRecipe] = useState<AiGeneratedRecipe | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async (q?: string) => {
@@ -147,15 +239,22 @@ function AISearchScreen({ token }: AISearchScreenProps) {
     setQuery(searchQuery);
     setIsLoading(true);
     setError(null);
+    setAiSuggestions([]);
 
     try {
-      const response = await recipeService.searchRecipes(searchQuery, token);
+      const response = await recipeService.searchRecipes(searchQuery, token, false);
       setResults(response.data);
       setSearched(true);
+      setIsLoading(false);
+
+      setIsAiLoading(true);
+      const aiResponse = await recipeService.searchRecipes(searchQuery, token, true);
+      setAiSuggestions(aiResponse.aiSuggestions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Search failed.");
     } finally {
       setIsLoading(false);
+      setIsAiLoading(false);
     }
   };
 
@@ -163,6 +262,7 @@ function AISearchScreen({ token }: AISearchScreenProps) {
     setQuery("");
     setSearched(false);
     setResults([]);
+    setAiSuggestions([]);
     setError(null);
   };
 
@@ -170,9 +270,12 @@ function AISearchScreen({ token }: AISearchScreenProps) {
     navigate(`/recipes/${recipe._id}`);
   };
 
+  const handleOpenAiRecipe = (recipe: AiGeneratedRecipe) => {
+    setSelectedAiRecipe(recipe);
+  };
+
   return (
     <Box sx={{ minHeight: "100vh", p: 4 }}>
-      {/* Header */}
       <Box sx={{ mb: 4 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
           <AutoAwesome sx={{ fontSize: 20, color: "primary.main" }} />
@@ -185,7 +288,6 @@ function AISearchScreen({ token }: AISearchScreenProps) {
         </Typography>
       </Box>
 
-      {/* Search bar */}
       <Box sx={{ maxWidth: 640, mb: 4 }}>
         <TextField
           fullWidth
@@ -295,8 +397,88 @@ function AISearchScreen({ token }: AISearchScreenProps) {
                 ))}
               </Grid>
             )}
+
+            {isAiLoading && (
+              <Box sx={{ mt: 5, p: 3, bgcolor: "rgba(255,107,53,0.02)", borderRadius: 2, border: "1px dashed", borderColor: "primary.light" }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" color="text.secondary">
+                    Generating unique AI recipes based on these results...
+                  </Typography>
+                </Stack>
+              </Box>
+            )}
+
+            {!isAiLoading && aiSuggestions.length > 0 && (
+              <Box sx={{ mt: 5 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                  <AutoAwesome sx={{ fontSize: 16, color: "primary.main" }} />
+                  <Typography variant="body2" fontWeight={600}>
+                    AI Generated Recipes
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    — inspired by your search
+                  </Typography>
+                </Stack>
+                <Grid container spacing={2} sx={{ maxWidth: 900 }}>
+                  {aiSuggestions.map((recipe, idx) => (
+                    <Grid size={{ xs: 12, lg: 6 }} key={idx}>
+                      <AiRecipeCard recipe={recipe} onOpen={handleOpenAiRecipe} />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
             </Box>
         ) : null}
+
+      <Dialog
+        open={Boolean(selectedAiRecipe)}
+        onClose={() => setSelectedAiRecipe(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <AutoAwesome sx={{ fontSize: 18, color: "primary.main" }} />
+          {selectedAiRecipe?.title}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2}>
+            <Typography variant="body2" color="text.secondary">
+              {selectedAiRecipe?.description}
+            </Typography>
+            <Stack direction="row" spacing={1}>
+              <Chip size="small" label={selectedAiRecipe?.cookTime ?? ""} />
+              <Chip size="small" label={selectedAiRecipe?.difficulty ?? ""} />
+              <Chip size="small" label={`${selectedAiRecipe?.servings ?? 0} servings`} />
+            </Stack>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Ingredients
+              </Typography>
+              <Stack spacing={0.5}>
+                {(selectedAiRecipe?.ingredients ?? []).map((ingredient, index) => (
+                  <Typography key={`${ingredient}-${index}`} variant="body2">
+                    • {ingredient}
+                  </Typography>
+                ))}
+              </Stack>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Instructions
+              </Typography>
+              <Stack spacing={0.75}>
+                {(selectedAiRecipe?.instructions ?? []).map((instruction, index) => (
+                  <Typography key={`${instruction}-${index}`} variant="body2">
+                    {index + 1}. {instruction}
+                  </Typography>
+                ))}
+              </Stack>
+            </Box>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
