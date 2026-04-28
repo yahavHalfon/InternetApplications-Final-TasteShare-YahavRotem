@@ -17,6 +17,14 @@ Content-Type: application/json
     "password": "password123"
 }
 
+### Google Sign-In
+POST http://localhost:3000/auth/google
+Content-Type: application/json
+
+{
+    "credential": "REPLACE_WITH_GOOGLE_ID_TOKEN"
+}
+
 ### Refresh Token
 POST http://localhost:3000/auth/refresh
 Content-Type: application/json
@@ -34,11 +42,8 @@ Content-Type: application/json
     "refreshToken": "{{login.response.body.refreshToken}}"
 }
 
-### Get all recipes
-GET http://localhost:3000/recipes
-
-### Get recipes
-GET http://localhost:3000/recipes
+### Get all recipes (paginated)
+GET http://localhost:3000/recipes?page=1&limit=10
 
 ### Get recipe by ID
 GET http://localhost:3000/recipes/REPLACE_WITH_VALID_ID
@@ -74,44 +79,62 @@ Content-Type: application/json
 DELETE http://localhost:3000/recipes/{{createRecipe.response.body._id}}
 Authorization: Bearer {{login.response.body.token}}
 
-### Get all comments
-GET http://localhost:3000/comments
+### Toggle like on a recipe
+POST http://localhost:3000/recipes/{{createRecipe.response.body._id}}/like
+Authorization: Bearer {{login.response.body.token}}
 
-### Get comments by recipe
-GET http://localhost:3000/comments?recipeId=REPLACE_WITH_VALID_ID
-
-### Get comment by ID
-GET http://localhost:3000/comments/REPLACE_WITH_VALID_ID
-
-### Create a new comment
-# @name createComment
-POST http://localhost:3000/comments
+### Search recipes (AI-powered)
+POST http://localhost:3000/recipes/search
 Authorization: Bearer {{login.response.body.token}}
 Content-Type: application/json
 
 {
-    "recipeId": "{{createRecipe.response.body._id}}",
-    "text": "This is a comment"
+    "query": "quick vegetarian pasta"
 }
 
-### Update a comment
-PUT http://localhost:3000/comments/{{createComment.response.body._id}}
+### Get my recipes
+GET http://localhost:3000/recipes/me
+Authorization: Bearer {{login.response.body.token}}
+
+### Get recipe comments
+GET http://localhost:3000/recipes/{{createRecipe.response.body._id}}/comments
+
+### Create a recipe comment
+POST http://localhost:3000/recipes/{{createRecipe.response.body._id}}/comments
 Authorization: Bearer {{login.response.body.token}}
 Content-Type: application/json
 
 {
-    "text": "Updated comment content"
+    "text": "This looks delicious!"
 }
 
-### Delete a comment
-DELETE http://localhost:3000/comments/{{createComment.response.body._id}}
+### Get my profile
+GET http://localhost:3000/users/profile
 Authorization: Bearer {{login.response.body.token}}
 
-### Get all users
-GET http://localhost:3000/users
+### Update my profile
+PUT http://localhost:3000/users/profile
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
 
-### Get user by ID
+{
+    "name": "Updated Name",
+    "bio": "Food lover",
+    "website": "https://example.com",
+    "location": "Tel Aviv, IL"
+}
+
+### Get user by ID (public profile)
 GET http://localhost:3000/users/REPLACE_WITH_VALID_ID
 
-### Delete a user
-DELETE http://localhost:3000/users/REPLACE_WITH_VALID_ID
+### Update profile picture
+PUT http://localhost:3000/users/profile/picture
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="profileImage"; filename="avatar.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/avatar.jpg
+--boundary--

@@ -13,24 +13,6 @@ import { uploadProfileImage } from "../middleware/upload";
 
 /**
  * @swagger
- * /users:
- *   get:
- *     summary: Returns the list of all the users
- *     tags: [Users]
- *     responses:
- *       200:
- *         description: The list of the users
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/User'
- */
-router.get("/", userController.get.bind(userController));
-
-/**
- * @swagger
  * /users/profile:
  *   get:
  *     summary: Get the authenticated user's own profile
@@ -148,7 +130,7 @@ router.put(
  * @swagger
  * /users/{id}:
  *   get:
- *     summary: Get the user by id
+ *     summary: Get public user profile by id
  *     tags: [Users]
  *     parameters:
  *       - in: path
@@ -159,35 +141,14 @@ router.put(
  *         description: The user id
  *     responses:
  *       200:
- *         description: The user description by id
+ *         description: Public user profile
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/User'
+ *               $ref: '#/components/schemas/PublicUser'
  *       404:
  *         description: The user was not found
  */
 router.get("/:id", userController.getById.bind(userController));
-
-/**
- * @swagger
- * /users/{id}:
- *   delete:
- *     summary: Remove the user by id
- *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: The user id
- *     responses:
- *       200:
- *         description: The user was deleted
- *       404:
- *         description: The user was not found
- */
-router.delete("/:id", userController.delete.bind(userController));
 
 export default router;

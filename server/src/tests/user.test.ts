@@ -11,12 +11,6 @@ import fs from "fs";
 dotenv.config({ path: ".env.test" });
 
 let app: Express;
-const testUser = {
-    email: "testuser@example.com",
-    password: "password123",
-};
-
-let userId: string;
 
 const profileUser = {
     email: "profileuser@example.com",
@@ -45,8 +39,6 @@ async function restoreProfileUser() {
 beforeAll(async () => {
     app = await initApp();
     await userModel.deleteMany();
-    const user = await userModel.create(testUser);
-    userId = user._id.toString();
 
     const regResponse = await request(app).post("/auth/register").send(profileUser);
     profileToken = regResponse.body.token;
@@ -55,53 +47,6 @@ beforeAll(async () => {
 afterAll(async () => {
     await mongoose.connection.dropDatabase();
     await mongoose.connection.close();
-});
-
-describe("User Routes Tests", () => {
-    test("Get All Users", async () => {
-        const response = await request(app).get("/users");
-        expect(response.statusCode).toBe(200);
-        expect(Array.isArray(response.body)).toBeTruthy();
-        expect(response.body.length).toBeGreaterThan(0);
-        expect(response.body[0].email).toBe(testUser.email);
-    });
-
-    test("Get User By ID - Success", async () => {
-        const response = await request(app).get(`/users/${userId}`);
-        expect(response.statusCode).toBe(200);
-        expect(response.body.email).toBe(testUser.email);
-        expect(response.body._id).toBe(userId);
-    });
-
-    test("Get User By ID - Fail (Invalid ID)", async () => {
-        const response = await request(app).get("/users/invalid-id-format");
-        expect(response.statusCode).toBe(400);
-    });
-
-    test("Get User By ID - Fail (Not Found)", async () => {
-        const nonExistentId = new mongoose.Types.ObjectId();
-        const response = await request(app).get(`/users/${nonExistentId}`);
-        expect(response.statusCode).toBe(404);
-    });
-
-    test("Delete User - Fail (Invalid ID)", async () => {
-        const response = await request(app).delete("/users/invalid-id-format");
-        expect(response.statusCode).toBe(400);
-    });
-
-    test("Delete User - Fail (Not Found)", async () => {
-        const nonExistentId = new mongoose.Types.ObjectId();
-        const response = await request(app).delete(`/users/${nonExistentId}`);
-        expect(response.statusCode).toBe(404);
-    });
-
-    test("Delete User - Success", async () => {
-        const response = await request(app).delete(`/users/${userId}`);
-        expect(response.statusCode).toBe(200);
-
-        const check = await userModel.findById(userId);
-        expect(check).toBeNull();
-    });
 });
 
 describe("User Profile Tests", () => {
@@ -115,6 +60,28 @@ describe("User Profile Tests", () => {
         expect(response.body).toHaveProperty("id");
         expect(response.body).toHaveProperty("avatarUrl");
         expect(response.body).not.toHaveProperty("password");
+    });
+
+    test("Get User By ID - Success (Public profile only)", async () => {
+        const user = await userModel.findOne({ email: profileUser.email });
+        expect(user).not.toBeNull();
+
+        const response = await request(app).get(`/users/${user!._id}`);
+        expect(response.statusCode).toBe(200);
+        expect(response.body.email).toBe(profileUser.email);
+        expect(response.body.name).toBe(profileUser.name);
+        expect(response.body).toHaveProperty("id");
+        expect(response.body).toHaveProperty("avatarUrl");
+        // Must NOT expose sensitive fields
+        expect(response.body).not.toHaveProperty("password");
+        expect(response.body).not.toHaveProperty("refreshTokens");
+        expect(response.body).not.toHaveProperty("_id");
+    });
+
+    test("Get User By ID - Fail (Not Found)", async () => {
+        const nonExistentId = new mongoose.Types.ObjectId();
+        const response = await request(app).get(`/users/${nonExistentId}`);
+        expect(response.statusCode).toBe(404);
     });
 
     test("Get Profile - Fail (No Auth)", async () => {
@@ -303,6 +270,16 @@ describe("User Profile Tests", () => {
         }
     });
 
+    test("UserController - getProfile returns 401 when no user in request", async () => {
+        const req: any = { user: undefined };
+        const res: any = createMockResponse();
+
+        await userController.getProfile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(res.json).toHaveBeenCalledWith({ error: "Unauthorized" });
+    });
+
     test("UserController - updateProfile returns 404 when user is missing", async () => {
         const findByIdSpy = jest.spyOn(userModel, "findById").mockResolvedValue(null as never);
         const req: any = { user: { _id: "missing-user-id" }, body: {} };
@@ -316,6 +293,16 @@ describe("User Profile Tests", () => {
         } finally {
             findByIdSpy.mockRestore();
         }
+    });
+
+    test("UserController - updateProfile returns 401 when no user in request", async () => {
+        const req: any = { user: undefined, body: {} };
+        const res: any = createMockResponse();
+
+        await userController.updateProfile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(res.json).toHaveBeenCalledWith({ error: "Unauthorized" });
     });
 
     test("UserController - updateProfilePicture returns 404 when user is missing", async () => {
@@ -335,6 +322,26 @@ describe("User Profile Tests", () => {
         } finally {
             findByIdSpy.mockRestore();
         }
+    });
+
+    test("UserController - updateProfilePicture returns 401 when no user in request", async () => {
+        const req: any = { user: undefined, file: { filename: "avatar.jpg" }, body: {} };
+        const res: any = createMockResponse();
+
+        await userController.updateProfilePicture(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(401);
+        expect(res.json).toHaveBeenCalledWith({ error: "Unauthorized" });
+    });
+
+    test("UserController - updateProfilePicture returns 400 when no file", async () => {
+        const req: any = { user: { _id: "some-user-id" }, body: {} };
+        const res: any = createMockResponse();
+
+        await userController.updateProfilePicture(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith({ error: "Profile image is required" });
     });
 
     afterAll(() => {

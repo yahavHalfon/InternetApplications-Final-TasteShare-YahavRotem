@@ -136,7 +136,7 @@ All endpoints are documented interactively at `/api-docs` when the server is run
 | POST | `/auth/register` | - | Register new user |
 | POST | `/auth/login` | - | Login with email/password |
 | POST | `/auth/google` | - | Sign in with Google |
-| POST | `/auth/logout` | - | Logout (invalidate refresh token) |
+| POST | `/auth/logout` | ✓ | Logout (invalidate refresh token) |
 | POST | `/auth/refresh` | - | Refresh access token |
 | GET | `/recipes` | - | Get paginated recipe feed |
 | GET | `/recipes/me` | ✓ | Get authenticated user's recipes |
@@ -148,12 +148,10 @@ All endpoints are documented interactively at `/api-docs` when the server is run
 | POST | `/recipes/:id/like` | ✓ | Toggle like on a recipe |
 | GET | `/recipes/:id/comments` | - | Get recipe comments |
 | POST | `/recipes/:id/comments` | ✓ | Add a comment to a recipe |
-| GET | `/users` | - | Get all users |
 | GET | `/users/profile` | ✓ | Get authenticated user's profile |
 | PUT | `/users/profile` | ✓ | Update authenticated user's profile |
 | PUT | `/users/profile/picture` | ✓ | Upload profile picture |
-| GET | `/users/:id` | - | Get user by ID |
-| DELETE | `/users/:id` | - | Delete user by ID |
+| GET | `/users/:id` | - | Get public user profile by ID |
 
 ---
 

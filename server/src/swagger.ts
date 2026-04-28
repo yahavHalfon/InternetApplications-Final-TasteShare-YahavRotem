@@ -52,23 +52,6 @@ const options: swaggerJsdoc.Options = {
                         user: { $ref: '#/components/schemas/PublicUser' },
                     },
                 },
-                User: {
-                    type: 'object',
-                    required: ['email', 'password'],
-                    properties: {
-                        _id: { type: 'string', example: '60d0fe4f5311236168a109ca' },
-                        email: { type: 'string', example: 'test@test.com' },
-                        password: { type: 'string', example: 'password123' },
-                        refreshTokens: { type: 'array', items: { type: 'string' } },
-                        name: { type: 'string', example: 'Maria Chen' },
-                        username: { type: 'string', example: 'mariachen' },
-                        avatarUrl: { type: 'string', example: 'https://example.com/avatar.png' },
-                        bio: { type: 'string', example: 'Home cook and food photographer.' },
-                        website: { type: 'string', example: 'tasteshare.co/maria' },
-                        location: { type: 'string', example: 'San Francisco, CA' },
-                        savedRecipes: { type: 'array', items: { type: 'string' } },
-                    },
-                },
                 Recipe: {
                     type: 'object',
                     required: ['userId', 'image', 'title', 'description', 'ingredients', 'instructions', 'likedBy', 'cookTime', 'servings', 'difficulty'],
