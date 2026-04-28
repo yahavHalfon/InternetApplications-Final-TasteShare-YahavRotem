@@ -64,6 +64,38 @@ describe("Auth Routes Tests", () => {
         expect(response.statusCode).toBe(400);
     });
 
+    test("Register User - Fail (Invalid email format)", async () => {
+        const response = await request(app).post("/auth/register").send({
+            email: "not-an-email",
+            password: "password123",
+            username: "invalidemailuser"
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Invalid email format");
+    });
+
+    test("Register User - Fail (Short password)", async () => {
+        const response = await request(app).post("/auth/register").send({
+            email: "shortpass@auth.com",
+            password: "short",
+            username: "shortpassuser"
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Password must be at least 8 characters");
+    });
+
+    test("Register User - Fail (Empty normalized username)", async () => {
+        const response = await request(app).post("/auth/register").send({
+            email: "!!!@auth.com",
+            password: "password123"
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Username is required");
+    });
+
     test("Register User - Success (Missing username)", async () => {
         const response = await request(app).post("/auth/register").send({
             email: "nousername@auth.com",
@@ -115,6 +147,16 @@ describe("Auth Routes Tests", () => {
         expect(response.statusCode).toBe(400);
     });
 
+    test("Login User - Fail (Invalid email format)", async () => {
+        const response = await request(app).post("/auth/login").send({
+            email: "not-an-email",
+            password: "password123"
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.body.error).toBe("Invalid email format");
+    });
+
     test("Login - Fail (JWT_EXPIRES_IN missing)", async () => {
         const originalExpiresIn = process.env.JWT_EXPIRES_IN;
         process.env.JWT_EXPIRES_IN = "";
@@ -154,7 +196,15 @@ describe("Auth Routes Tests", () => {
         expect(response.statusCode).toBe(200);
         expect(response.body.token).toBeDefined();
         expect(response.body.refreshToken).toBeDefined();
+
+        const oldRefreshToken = refreshToken;
         refreshToken = response.body.refreshToken;
+
+        const reuseResponse = await request(app).post("/auth/refresh").send({
+            refreshToken: oldRefreshToken
+        });
+
+        expect(reuseResponse.statusCode).toBe(401);
     });
 
     test("Refresh Token - Fail (Invalid token)", async () => {
@@ -222,6 +272,12 @@ describe("Auth Routes Tests", () => {
                 refreshToken: freshRefreshToken
             });
         expect(logoutRes.statusCode).toBe(200);
+
+        const reuseResponse = await request(app).post("/auth/refresh").send({
+            refreshToken: freshRefreshToken
+        });
+
+        expect(reuseResponse.statusCode).toBe(401);
     });
 
     test("Logout - Fail (Invalid token)", async () => {

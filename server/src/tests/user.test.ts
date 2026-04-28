@@ -3,6 +3,7 @@ import initApp from "../index";
 import mongoose from "mongoose";
 import { Express } from "express";
 import userModel from "../model/userModel";
+import userController from "../controllers/userController";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
@@ -24,6 +25,22 @@ const profileUser = {
     name: "Profile User",
 };
 let profileToken: string;
+
+const createMockResponse = () => {
+    const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+    };
+
+    return res;
+};
+
+async function restoreProfileUser() {
+    await userModel.deleteMany({ email: profileUser.email });
+    await request(app).post("/auth/register").send(profileUser);
+    const loginResponse = await request(app).post("/auth/login").send(profileUser);
+    profileToken = loginResponse.body.token;
+}
 
 beforeAll(async () => {
     app = await initApp();
@@ -112,6 +129,22 @@ describe("User Profile Tests", () => {
         expect(response.statusCode).toBe(401);
     });
 
+    test("Get Profile - Fail (User Not Found)", async () => {
+        const user = await userModel.findOne({ email: profileUser.email });
+        if (user) await userModel.findByIdAndDelete(user._id);
+
+        try {
+            const response = await request(app)
+                .get("/users/profile")
+                .set("Authorization", "Bearer " + profileToken);
+
+            expect(response.statusCode).toBe(401);
+            expect(response.body.error).toBe("Unauthorized: User not found");
+        } finally {
+            await restoreProfileUser();
+        }
+    });
+
     test("Update Profile Name - Success", async () => {
         const response = await request(app)
             .put("/users/profile")
@@ -178,6 +211,23 @@ describe("User Profile Tests", () => {
         expect(response.statusCode).toBe(401);
     });
 
+    test("Update Profile - Fail (User Not Found)", async () => {
+        const currentProfileUser = await userModel.findOne({ email: profileUser.email });
+        if (currentProfileUser) await userModel.findByIdAndDelete(currentProfileUser._id);
+
+        try {
+            const response = await request(app)
+                .put("/users/profile")
+                .set("Authorization", "Bearer " + profileToken)
+                .send({ name: "Missing User" });
+
+            expect(response.statusCode).toBe(401);
+            expect(response.body.error).toBe("Unauthorized: User not found");
+        } finally {
+            await restoreProfileUser();
+        }
+    });
+
     test("Update Profile Picture - Success", async () => {
         const response = await request(app)
             .put("/users/profile/picture")
@@ -202,6 +252,23 @@ describe("User Profile Tests", () => {
         expect(response.statusCode).toBe(401);
     });
 
+    test("Update Profile Picture - Fail (User Not Found)", async () => {
+        const user = await userModel.findOne({ email: profileUser.email });
+        if (user) await userModel.findByIdAndDelete(user._id);
+
+        try {
+            const response = await request(app)
+                .put("/users/profile/picture")
+                .set("Authorization", "Bearer " + profileToken)
+                .attach("profileImage", Buffer.from("fake-image-data"), "avatar.jpg");
+
+            expect(response.statusCode).toBe(401);
+            expect(response.body.error).toBe("Unauthorized: User not found");
+        } finally {
+            await restoreProfileUser();
+        }
+    });
+
     test("Update Profile Picture - Fail (Image Too Large)", async () => {
         const oversizedBuffer = Buffer.alloc(5 * 1024 * 1024 + 1); // 5 MB + 1 byte
         const response = await request(app)
@@ -219,6 +286,55 @@ describe("User Profile Tests", () => {
             .attach("profileImage", Buffer.from("fake-data"), { filename: "avatar.pdf", contentType: "application/pdf" });
         expect(response.statusCode).toBe(400);
         expect(response.body.error).toMatch(/only image files/i);
+    });
+
+    test("UserController - getProfile returns 404 when user is missing", async () => {
+        const findByIdSpy = jest.spyOn(userModel, "findById").mockResolvedValue(null as never);
+        const req: any = { user: { _id: "missing-user-id" } };
+        const res: any = createMockResponse();
+
+        try {
+            await userController.getProfile(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(404);
+            expect(res.json).toHaveBeenCalledWith({ error: "User not found" });
+        } finally {
+            findByIdSpy.mockRestore();
+        }
+    });
+
+    test("UserController - updateProfile returns 404 when user is missing", async () => {
+        const findByIdSpy = jest.spyOn(userModel, "findById").mockResolvedValue(null as never);
+        const req: any = { user: { _id: "missing-user-id" }, body: {} };
+        const res: any = createMockResponse();
+
+        try {
+            await userController.updateProfile(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(404);
+            expect(res.json).toHaveBeenCalledWith({ error: "User not found" });
+        } finally {
+            findByIdSpy.mockRestore();
+        }
+    });
+
+    test("UserController - updateProfilePicture returns 404 when user is missing", async () => {
+        const findByIdSpy = jest.spyOn(userModel, "findById").mockResolvedValue(null as never);
+        const req: any = {
+            user: { _id: "missing-user-id" },
+            file: { filename: "avatar.jpg" },
+            body: {},
+        };
+        const res: any = createMockResponse();
+
+        try {
+            await userController.updateProfilePicture(req, res);
+
+            expect(res.status).toHaveBeenCalledWith(404);
+            expect(res.json).toHaveBeenCalledWith({ error: "User not found" });
+        } finally {
+            findByIdSpy.mockRestore();
+        }
     });
 
     afterAll(() => {
