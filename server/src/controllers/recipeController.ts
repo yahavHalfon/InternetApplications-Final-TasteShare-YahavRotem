@@ -8,6 +8,7 @@ import User from "../model/userModel";
 import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/authMiddleware";
 import embeddingService from "../services/embeddingService";
+import type { AiGeneratedRecipe } from "../services/embeddingService";
 import recipeService from "../services/recipeService";
 
 const parseStringArray = (value: unknown): string[] => {
@@ -180,7 +181,7 @@ class RecipeController extends BaseController<IRecipe> {
     }
 
     async searchRecipes(req: AuthRequest, res: Response): Promise<Response | void> {
-        const { query } = req.body;
+        const { query, generateAi } = req.body;
 
         if (query === undefined || query === null) {
             return res.status(400).json({ error: "Query is required" });
@@ -199,6 +200,12 @@ class RecipeController extends BaseController<IRecipe> {
             return res.status(400).json({ error: "Query is too long" });
         }
 
+        if (generateAi !== undefined && typeof generateAi !== "boolean") {
+            return res.status(400).json({ error: "generateAi must be a boolean" });
+        }
+
+        const shouldGenerateAi = generateAi !== false;
+
         try {
             let recipes;
             try {
@@ -208,9 +215,19 @@ class RecipeController extends BaseController<IRecipe> {
                 recipes = await recipeService.simpleRecipeSearch(trimmedQuery);
             }
 
+            let aiSuggestions: AiGeneratedRecipe[] = [];
+            try {
+                if (shouldGenerateAi) {
+                    aiSuggestions = await embeddingService.generateRecipes(trimmedQuery, recipes);
+                }
+            } catch (ragError) {
+                console.warn("[RecipeController.searchRecipes] RAG generation failed:", ragError);
+            }
+
             return res.status(200).json({
                 data: recipes,
                 query: trimmedQuery,
+                aiSuggestions,
             });
         } catch (error) {
             console.error("[RecipeController.searchRecipes] Error:", error);
