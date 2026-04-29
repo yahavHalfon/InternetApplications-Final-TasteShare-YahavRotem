@@ -7,11 +7,12 @@ import Recipe, { type RecipeDifficulty } from "./model/recipeModel";
 import Comment from "./model/commentModel";
 import embeddingService from "./services/embeddingService";
 
-dotenv.config({ path: ".env.dev" });
+const envPath = process.env.ENV_FILE || ".env.dev";
+dotenv.config({ path: envPath });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI is required in .env.dev");
+  throw new Error(`MONGODB_URI is required in ${envPath}`);
 }
 
 type SeedRecipe = {
