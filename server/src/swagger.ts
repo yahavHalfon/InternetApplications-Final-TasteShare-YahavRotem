@@ -1,5 +1,9 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import dotenv from 'dotenv';
+
+const envFile = process.env.ENV_FILE ?? (process.env.NODE_ENV === "production" ? ".env.prod" : ".env.dev");
+dotenv.config({ path: envFile });
 
 const swaggerServerUrl = process.env.PUBLIC_SERVER_URL || `http://localhost:${process.env.PORT || 3000}`;
 
